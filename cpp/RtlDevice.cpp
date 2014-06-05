@@ -106,7 +106,7 @@ RtlDevice::RtlDevice(uint32_t channelNumber)
 
             if (numGains > 0) {
                 int *gains = new int[numGains];
-                int min = INFINITY, max = -INFINITY;
+                double min = INFINITY, max = -INFINITY;
 
                 rtlsdr_get_tuner_gains(m_device, gains);
 
