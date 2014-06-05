@@ -10,3 +10,5 @@ redhawk_SOURCES_auto += RTL2832U_base.h
 redhawk_SOURCES_auto += main.cpp
 redhawk_SOURCES_auto += struct_props.h
 redhawk_SOURCES_auto += template_impl.cpp
+redhawk_SOURCES_auto += RtlDevice.cpp
+redhawk_SOURCES_auto += RtlDevice.h

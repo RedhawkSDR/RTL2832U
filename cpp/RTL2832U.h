@@ -3,6 +3,8 @@
 
 #include "RTL2832U_base.h"
 
+#include "RtlDevice.h"
+
 class RTL2832U_i : public RTL2832U_base
 {
     ENABLE_LOGGING
