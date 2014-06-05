@@ -5,6 +5,7 @@
   <author>
     <name>null</name>
   </author>
+  <description>Realtek RTL2832U device using librtlsdr. Supports various tuners, including Elonics E4000, Rafael Micro R820T and R828D, Fitipower FC0012 and FC0013, and FCI FC2580.</description>
   <propertyfile type="PRF">
     <localfile name="RTL2832U.prf.xml"/>
   </propertyfile>

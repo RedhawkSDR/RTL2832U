@@ -10,6 +10,7 @@
   </simple>
   <simple id="DCE:0f99b2e4-9903-4631-9846-ff349d18ecfb" mode="readonly" name="device_model" type="string">
     <description> This specifies the specific device</description>
+    <value>RTL2832U</value>
     <kind kindtype="configure"/>
     <kind kindtype="allocation"/>
     <action type="eq"/>
@@ -142,4 +143,58 @@ False: Does not need control and can just attach to any currently tasked device 
     </struct>
     <configurationkind kindtype="configure"/>
   </structsequence>
+  <structsequence id="available_devices" mode="readonly" name="available_devices">
+    <description>A list of the available RTL devices connected to the host</description>
+    <struct id="available_devices::rtl_device_struct" name="rtl_device_struct">
+      <description>An available rtl dongle connected to the localhost</description>
+      <simple id="available_devices::rtl::name" name="name" type="string">
+        <description>The name of the rtl dongle</description>
+      </simple>
+      <simple id="available_devices::rtl::vendor" name="vendor" type="string">
+        <description>The vendor of the rtl dongle</description>
+      </simple>
+      <simple id="available_devices::rtl::product" name="product" type="string">
+        <description>The product number of the rtl dongle</description>
+      </simple>
+      <simple id="available_devices::rtl::serial" name="serial" type="string">
+        <description>The serial number of the rtl dongle</description>
+      </simple>
+      <simple id="available_devices::rtl::index" name="index" type="ushort">
+        <description>The index of the rtl dongle</description>
+        <value>0</value>
+      </simple>
+    </struct>
+    <configurationkind kindtype="configure"/>
+  </structsequence>
+  <struct id="target_device" mode="readwrite" name="target_device">
+    <description>Information used to specify a particular RTL device to target. All fields are optional. First device found that meets the specified criteria is selected.</description>
+    <simple id="target::name" name="name" type="string">
+      <description>The name of the rtl dongle</description>
+    </simple>
+    <simple id="target::serial" name="serial" type="string">
+      <description>The serial number of the rtl dongle</description>
+    </simple>
+    <simple id="target::index" name="index" type="short">
+      <description>The index of the rtl dongle (-1 if don't care)</description>
+    </simple>
+    <simple id="target::vendor" name="vendor" type="string">
+      <description>The vendor of the rtl dongle</description>
+    </simple>
+    <simple id="target::product" name="product" type="string">
+      <description>The product number of the rtl dongle</description>
+    </simple>
+    <configurationkind kindtype="configure"/>
+  </struct>
+  <simple id="update_available_devices" mode="readwrite" name="update_available_devices" type="boolean">
+    <description>When set to true, the available_devices property will be updated with all available RTL devices found on the host.</description>
+    <value>False</value>
+    <kind kindtype="configure"/>
+    <action type="external"/>
+  </simple>
+  <simple id="group_id" mode="readwrite" name="group_id" type="string">
+    <description>The group id for all tuners controlled by the device</description>
+    <kind kindtype="configure"/>
+    <kind kindtype="execparam"/>
+    <action type="external"/>
+  </simple>
 </properties>
