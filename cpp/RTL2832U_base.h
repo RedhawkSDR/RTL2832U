@@ -43,6 +43,7 @@ class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status
         // Member variables exposed as properties
         bool update_available_devices;
         std::string group_id;
+        bool RTL2832U_agc_enable;
         target_device_struct target_device;
         std::vector<connection_descriptor_struct> connectionTable;
         std::vector<rtl_device_struct_struct> available_devices;

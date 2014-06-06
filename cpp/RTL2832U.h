@@ -134,6 +134,7 @@ class RTL2832U_i : public RTL2832U_base
         // configure callbacks
         void updateAvailableDevicesChanged(const bool* old_value, const bool* new_value);
         void groupIdChanged(const std::string* old_value, const std::string* new_value);
+        void rtl2832uAgcEnableChanged(const std::string* old_value, const std::string* new_value);
         void targetDeviceChanged(const target_device_struct* old_value, const target_device_struct* new_value);
 
         // helper functions

@@ -115,8 +115,14 @@ class RtlDevice
     public:
         rtlsdr_dev_t * get() { return m_device; }
 
+        // sets AGC mode of RTL2832U chip
         void setAgcMode(bool enable);
+
+        // sets gain mode (auto or manual) of the tuner chip
+        void setGainMode(bool enable);
+        // sets gain value of the tuner chip. Requires that gain mode be set to manual.
         void setGain(double gain);
+        // gets current gain setting of the tuner chip
         double getGain();
 
         FrequencyRange getFreqRange();
@@ -130,10 +136,6 @@ class RtlDevice
 
         void setRate(double rate);
         double getRate();
-
-        std::string getSubdevName() { return std::string(""); }
-
-        std::string getAntenna() { return std::string(""); }
 
         std::vector<double> getClockRates();
 

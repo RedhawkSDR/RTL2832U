@@ -252,6 +252,7 @@ void RTL2832U_i::construct()
 
     // set some default values that should get overwritten by correct values
     group_id = "RTL_GROUP_ID_NOT_SET";
+    RTL2832U_agc_enable = false;
 
     target_device.index = -1;
     target_device.name.clear();
@@ -272,6 +273,7 @@ void RTL2832U_i::construct()
 
     addPropertyChangeListener("target_device", this, &RTL2832U_i::targetDeviceChanged);
     addPropertyChangeListener("group_id", this, &RTL2832U_i::groupIdChanged);
+    addPropertyChangeListener("RTL2832U_agc_enable", this, &RTL2832U_i::rtl2832uAgcEnableChanged);
     addPropertyChangeListener("update_available_devices", this, &RTL2832U_i::updateAvailableDevicesChanged);
 
     if(update_available_devices){
@@ -349,10 +351,8 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
     exclusive_lock tuner_lock(*rtl_tuner.lock);
 
     // configure hw
-    // Note: round is used because setFreq truncates value it's given. Round will give us the closest integer value to the request.
-    // Note: ceil is used because setRate truncates value it's given. Ceil will give us the lowest integer value that meets the request.
-    rtl_device_ptr->setFreq(round(request.center_frequency-if_offset));
-    rtl_device_ptr->setRate(ceil(bw_sr));
+    rtl_device_ptr->setFreq(request.center_frequency-if_offset);
+    rtl_device_ptr->setRate(bw_sr);
 
     // update frontend_tuner_status with actual hw values
     fts.center_frequency = rtl_device_ptr->getFreq()+if_offset;
@@ -491,7 +491,7 @@ void RTL2832U_i::setTunerAgcEnable(const std::string& allocation_id, bool enable
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
     if(allocation_id != getControlAllocationId(idx))
         throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
-    rtl_device_ptr->setAgcMode(enable);
+    rtl_device_ptr->setGainMode(enable);
     frontend_tuner_status[idx].agc = enable;
     frontend_tuner_status[idx].gain = rtl_device_ptr->getGain();
 }
@@ -512,18 +512,17 @@ void RTL2832U_i::setTunerGain(const std::string& allocation_id, float gain)
     // set hardware to new value. Raise an exception if it's not possible
     try {
 
+        // check if tuner AGC is enabled before adjusting manually
+        if(frontend_tuner_status[idx].agc){
+            throw FRONTEND::FrontendException("Gain mode set to auto; must set mode to manual before manually setting gain.");
+        }
+
         if (frontend::floatingPointCompare(gain,rtl_capabilities.gain_min)<0 ||
                 frontend::floatingPointCompare(gain,rtl_capabilities.gain_max)>0){
             std::ostringstream msg;
             msg << __PRETTY_FUNCTION__ << ":: INVALID GAIN (" << gain <<")";
             LOG_WARN(RTL2832U_i,msg.str() );
             throw FRONTEND::BadParameterException(msg.str().c_str());
-        }
-
-        // disable AGC before setting gain manually
-        if(frontend_tuner_status[idx].agc){
-            rtl_device_ptr->setAgcMode(false);
-            frontend_tuner_status[idx].agc = false;
         }
 
         // set hw with new value
@@ -545,7 +544,7 @@ float RTL2832U_i::getTunerGain(const std::string& allocation_id)
 {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
-    // since AGC could be enabled and changing gain, let's get it straight from the source
+    // since tuner AGC could be enabled and changing gain, let's get it straight from the source
     frontend_tuner_status[idx].gain = rtl_device_ptr->getGain();
     LOG_DEBUG(RTL2832U_i,"got gain setting of " << frontend_tuner_status[idx].gain );
     return frontend_tuner_status[idx].gain;
@@ -737,6 +736,12 @@ void RTL2832U_i::groupIdChanged(const std::string* old_value, const std::string*
         frontend_tuner_status[0].group_id = *new_value;
     }
 }
+void RTL2832U_i::rtl2832uAgcEnableChanged(const std::string* old_value, const std::string* new_value){
+    LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
+    exclusive_lock lock(prop_lock);
+    if(rtl_device_ptr != NULL)
+        rtl_device_ptr->setAgcMode(RTL2832U_agc_enable);
+}
 void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, const target_device_struct* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
@@ -844,8 +849,6 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         // if found, close existing RTL device (if applicable) and connect to new RTL device
         if( rtl_chan_num < 0){
             LOG_ERROR(RTL2832U_i,"COULD NOT FIND MATCHING RTL DEVICE!");
-            /* TODO - pass msg and invalid props to exception
-            throw CF::PropertySet::InvalidConfiguration("COULD NOT FIND MATCHING RTL DEVICE!",target_device);*/
             throw CF::PropertySet::InvalidConfiguration();
         }
         if(rtl_device_ptr != NULL){
@@ -866,8 +869,11 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         double setFreq = (rtl_capabilities.center_frequency_min + rtl_capabilities.center_frequency_max) / 2;
         rtl_device_ptr->setFreq(setFreq);
 
-        // start with AGC disabled and minimum gain setting
-        rtl_device_ptr->setAgcMode(false);
+        // set RTL2832 AGC mode according to property value
+        rtl_device_ptr->setAgcMode(RTL2832U_agc_enable);
+
+        // start with tuner gain mode set to manual with minimum gain setting
+        rtl_device_ptr->setGainMode(false);
         rtl_device_ptr->setGain(rtl_capabilities.gain_min);
 
 
@@ -881,7 +887,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
             rtl_tuner.lock = new boost::mutex;
         rtl_tuner.reset();
 
-        frontend_tuner_status[0].agc = false;
+        frontend_tuner_status[0].agc = false; // this is the tuner gain mode, not RTL2832U AGC mode
         frontend_tuner_status[0].allocation_id_csv = "";
         frontend_tuner_status[0].tuner_type = "RX_DIGITIZER";
         frontend_tuner_status[0].center_frequency = rtl_device_ptr->getFreq();

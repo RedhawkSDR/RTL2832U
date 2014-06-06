@@ -197,4 +197,10 @@ False: Does not need control and can just attach to any currently tasked device 
     <kind kindtype="execparam"/>
     <action type="external"/>
   </simple>
+  <simple id="RTL2832U_agc_enable" mode="readwrite" name="RTL2832U_agc_enable" type="boolean">
+    <description>Sets the AGC mode of the RTL2832U, which is different from the gain mode of the tuner. Gain mode of the tuner is set using the tuner port setTunerAgcEnable function.</description>
+    <value>False</value>
+    <kind kindtype="configure"/>
+    <action type="external"/>
+  </simple>
 </properties>

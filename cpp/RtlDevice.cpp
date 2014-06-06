@@ -56,15 +56,15 @@ RtlDevice::RtlDevice(uint32_t channelNumber)
 
         if (rtlsdr_open(&m_device, m_channelNumber) >= 0) {
             if (rtlsdr_get_device_usb_strings(m_channelNumber, m_vendor, m_product, m_serial)) {
-                LOG_INFO(RtlDevice, "Unable to get device USB strings");
+                LOG_INFO(RtlDevice, "Unable to get device USB strings of index " << m_channelNumber);
             }
 
             const char *deviceName = rtlsdr_get_device_name(m_channelNumber);
 
             if (deviceName) {
-                LOG_INFO(RtlDevice, "Using device " << deviceName);
+                LOG_INFO(RtlDevice, "Using device " << deviceName << " at index " << m_channelNumber);
             } else {
-                LOG_INFO(RtlDevice, "Unable to get device name");
+                LOG_INFO(RtlDevice, "Unable to get device name of index " << m_channelNumber);
             }
 
             // Set the frequency range based upon the tuner type
@@ -274,7 +274,7 @@ void RtlDevice::issueStreamCmd(stream_cmd_t cmd)
     }
 }
 
-/* Attempt to set the tuner gain mode.
+/* Attempt to set the RTL2832 gain mode.
  */
 void RtlDevice::setAgcMode(bool enable)
 {
@@ -284,10 +284,30 @@ void RtlDevice::setAgcMode(bool enable)
         // For error checking
         int r;
 
-        if ((r = rtlsdr_set_tuner_gain_mode(m_device, int(!enable))) != 0) {
-            LOG_WARN(RtlDevice, "Unable to set tuner gain mode to " << (enable ? "auto" : "manual") << " with error " << r);
+        if ((r = rtlsdr_set_agc_mode(m_device, (int) enable)) != 0) {
+            LOG_WARN(RtlDevice, "Unable to set RTL2832 agc mode to " << (enable ? "enabled" : "disabled") << " with error " << r);
         } else {
-            LOG_INFO(RtlDevice, "Tuner gain mode set to " << (enable ? "auto" : "manual"));
+            LOG_INFO(RtlDevice, "RTL2832 agc mode set to " << (enable ? "enabled" : "disabled"));
+        }
+    } else {
+        LOG_WARN(RtlDevice, "Unable to set RTL2832 agc mode: Could not open RTL device "<<m_channelNumber);
+    }
+}
+
+/* Attempt to set the tuner gain mode.
+ */
+void RtlDevice::setGainMode(bool automatic)
+{
+    LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
+
+    if (m_device) {
+        // For error checking
+        int r;
+
+        if ((r = rtlsdr_set_tuner_gain_mode(m_device, int(!automatic))) != 0) {
+            LOG_WARN(RtlDevice, "Unable to set tuner gain mode to " << (automatic ? "auto" : "manual") << " with error " << r);
+        } else {
+            LOG_INFO(RtlDevice, "Tuner gain mode set to " << (automatic ? "auto" : "manual"));
         }
     } else {
         LOG_WARN(RtlDevice, "Unable to set gain mode: Could not open RTL device "<<m_channelNumber);
@@ -295,7 +315,8 @@ void RtlDevice::setAgcMode(bool enable)
 }
 
 /* Attempt to set the tuner gain.  Note that the gain is
- * specified in decibels
+ * specified in decibels.
+ * Tuner gain mode must be set to manual for this setter to work.
  */
 void RtlDevice::setGain(double gain)
 {
@@ -377,6 +398,10 @@ void RtlDevice::setFreq(double freq)
 {
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
 
+    // librtlsdr accepts frequency as an integer. To ensure we tune as near to
+    // the request as possible, we'll use round rather than truncating
+    freq = round(freq);
+
     if (m_device) {
         // For error checking
         int r;
@@ -425,6 +450,10 @@ double RtlDevice::getFreq()
 void RtlDevice::setRate(double rate)
 {
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
+
+    // librtlsdr accepts rate as an integer. To ensure we have a sample rate
+    // that meets or exceeds the request, we'll use ceil rather than truncating
+    rate = ceil(rate);
 
     if (m_device) {
         if (rate < m_rateRange.start()) {

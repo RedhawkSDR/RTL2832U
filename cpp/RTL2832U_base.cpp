@@ -124,6 +124,15 @@ void RTL2832U_base::loadProperties()
                 "external",
                 "execparam,configure");
 
+    addProperty(RTL2832U_agc_enable,
+                false,
+                "RTL2832U_agc_enable",
+                "RTL2832U_agc_enable",
+                "readwrite",
+                "",
+                "external",
+                "configure");
+
     frontend_listener_allocation = frontend::frontend_listener_allocation_struct();
     frontend_tuner_allocation = frontend::frontend_tuner_allocation_struct();
     addProperty(target_device,
