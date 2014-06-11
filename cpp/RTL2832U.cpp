@@ -736,7 +736,7 @@ void RTL2832U_i::groupIdChanged(const std::string* old_value, const std::string*
         frontend_tuner_status[0].group_id = *new_value;
     }
 }
-void RTL2832U_i::rtl2832uAgcEnableChanged(const std::string* old_value, const std::string* new_value){
+void RTL2832U_i::rtl2832uAgcEnableChanged(const bool* old_value, const bool* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     exclusive_lock lock(prop_lock);
     if(rtl_device_ptr != NULL)
