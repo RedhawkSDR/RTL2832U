@@ -22,7 +22,6 @@ AX_BOOST_THREAD
 AX_BOOST_REGEX
 
 # RTL-SDR
-#export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 PKG_CHECK_MODULES(librtlsdr, librtlsdr = 0.5.2)
 AC_SUBST(librtlsdr_CFLAGS)
 AC_SUBST(librtlsdr_LIBS)
