@@ -43,6 +43,13 @@ pushd cpp
 %configure
 make %{?_smp_mflags}
 popd
+# Implementation cpp_arm
+pushd cpp_arm
+./reconf
+%define _bindir %{_prefix}/dev/devices/RTL2832U/cpp_arm
+%configure
+make %{?_smp_mflags}
+popd
 
 
 %install
@@ -50,6 +57,11 @@ rm -rf $RPM_BUILD_ROOT
 # Implementation cpp
 pushd cpp
 %define _bindir %{_prefix}/dev/devices/RTL2832U/cpp
+make install DESTDIR=$RPM_BUILD_ROOT
+popd
+# Implementation cpp_arm
+pushd cpp_arm
+%define _bindir %{_prefix}/dev/devices/RTL2832U/cpp_arm
 make install DESTDIR=$RPM_BUILD_ROOT
 popd
 
@@ -65,4 +77,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/dev/devices/%{name}/RTL2832U.prf.xml
 %{_prefix}/dev/devices/%{name}/RTL2832U.spd.xml
 %{_prefix}/dev/devices/%{name}/cpp
+%{_prefix}/dev/devices/%{name}/cpp_arm
 
