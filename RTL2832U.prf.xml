@@ -170,18 +170,23 @@ False: Does not need control and can just attach to any currently tasked device 
     <description>Information used to specify a particular RTL device to target. All fields are optional. First device found that meets the specified criteria is selected.</description>
     <simple id="target::name" name="name" type="string">
       <description>The name of the rtl dongle</description>
+      <value></value>
     </simple>
     <simple id="target::serial" name="serial" type="string">
       <description>The serial number of the rtl dongle</description>
+      <value></value>
     </simple>
     <simple id="target::index" name="index" type="short">
       <description>The index of the rtl dongle (-1 if don't care)</description>
+      <value>-1</value>
     </simple>
     <simple id="target::vendor" name="vendor" type="string">
       <description>The vendor of the rtl dongle</description>
+      <value></value>
     </simple>
     <simple id="target::product" name="product" type="string">
       <description>The product number of the rtl dongle</description>
+      <value></value>
     </simple>
     <configurationkind kindtype="configure"/>
   </struct>
@@ -193,6 +198,7 @@ False: Does not need control and can just attach to any currently tasked device 
   </simple>
   <simple id="group_id" mode="readwrite" name="group_id" type="string">
     <description>The group id for all tuners controlled by the device</description>
+    <value></value>
     <kind kindtype="configure"/>
     <kind kindtype="execparam"/>
     <action type="external"/>

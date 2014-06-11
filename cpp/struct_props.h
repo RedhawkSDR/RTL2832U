@@ -16,6 +16,11 @@ typedef bulkio::connection_descriptor_struct connection_descriptor_struct;
 struct target_device_struct {
     target_device_struct ()
     {
+        name = "";
+        serial = "";
+        index = -1;
+        vendor = "";
+        product = "";
     };
 
     static std::string getId() {

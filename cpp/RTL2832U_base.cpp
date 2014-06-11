@@ -117,6 +117,7 @@ void RTL2832U_base::loadProperties()
                 "configure");
 
     addProperty(group_id,
+                "",
                 "group_id",
                 "group_id",
                 "readwrite",
