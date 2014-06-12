@@ -681,7 +681,10 @@ frontend::RFInfoPkt RTL2832U_i::get_rfinfo_pkt(const std::string& port_name)
 
 void RTL2832U_i::set_rfinfo_pkt(const std::string& port_name, const frontend::RFInfoPkt &pkt)
 {
-    LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " port_name=" << port_name << " pkt.rf_flow_id=" << pkt.rf_flow_id);
+    LOG_DEBUG(RTL2832U_i,__PRETTY_FUNCTION__ << " port_name=" << port_name << " pkt.rf_flow_id=" << pkt.rf_flow_id);
+    LOG_DEBUG(RTL2832U_i,__PRETTY_FUNCTION__ << " rf_center_freq=" << pkt.rf_center_freq );
+    LOG_DEBUG(RTL2832U_i,__PRETTY_FUNCTION__ << " rf_bandwidth=" << pkt.rf_bandwidth );
+    LOG_DEBUG(RTL2832U_i,__PRETTY_FUNCTION__ << " if_center_freq=" << pkt.if_center_freq );
 
     if( port_name == "RFInfo_in"){
         exclusive_lock lock(prop_lock);
