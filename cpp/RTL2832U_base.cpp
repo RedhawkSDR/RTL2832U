@@ -134,6 +134,15 @@ void RTL2832U_base::loadProperties()
                 "external",
                 "configure");
 
+    addProperty(frequency_correction,
+                0,
+                "frequency_correction",
+                "frequency_correction",
+                "readwrite",
+                "ppm",
+                "external",
+                "configure");
+
     frontend_listener_allocation = frontend::frontend_listener_allocation_struct();
     frontend_tuner_allocation = frontend::frontend_tuner_allocation_struct();
     addProperty(target_device,

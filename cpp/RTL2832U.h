@@ -136,6 +136,7 @@ class RTL2832U_i : public RTL2832U_base
         void groupIdChanged(const std::string* old_value, const std::string* new_value);
         void rtl2832uAgcEnableChanged(const bool* old_value, const bool* new_value);
         void targetDeviceChanged(const target_device_struct* old_value, const target_device_struct* new_value);
+        void frequencyCorrectionChanged(const short* old_value, const short* new_value);
 
         // helper functions
         std::string getStreamId();

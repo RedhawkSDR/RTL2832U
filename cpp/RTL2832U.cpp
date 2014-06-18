@@ -275,6 +275,7 @@ void RTL2832U_i::construct()
     addPropertyChangeListener("group_id", this, &RTL2832U_i::groupIdChanged);
     addPropertyChangeListener("RTL2832U_agc_enable", this, &RTL2832U_i::rtl2832uAgcEnableChanged);
     addPropertyChangeListener("update_available_devices", this, &RTL2832U_i::updateAvailableDevicesChanged);
+    addPropertyChangeListener("frequency_correction", this, &RTL2832U_i::frequencyCorrectionChanged);
 
     if(update_available_devices){
         update_available_devices = false;
@@ -775,6 +776,15 @@ void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, cons
     }
 }
 
+void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short* new_value){
+    LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
+    exclusive_lock lock(prop_lock);
+    if(rtl_device_ptr != NULL){
+        rtl_device_ptr->setFreqCorrection(frequency_correction);
+    	frequency_correction = rtl_device_ptr->getFreqCorrection();
+    }
+}
+
 /*************************************************************
 Helper functions
 *************************************************************/
@@ -877,6 +887,9 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
 
         // start with tuner gain mode set to auto
         rtl_device_ptr->setGainMode(true);
+
+        // get current frequency correction value
+    	frequency_correction = rtl_device_ptr->getFreqCorrection();
 
 
         // Initialize status vector

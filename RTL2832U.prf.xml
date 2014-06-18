@@ -209,4 +209,11 @@ False: Does not need control and can just attach to any currently tasked device 
     <kind kindtype="configure"/>
     <action type="external"/>
   </simple>
+  <simple id="frequency_correction" mode="readwrite" name="frequency_correction" type="short">
+    <description>Actual frequency correction value of the device.</description>
+    <value>0</value>
+    <units>ppm</units>
+    <kind kindtype="configure"/>
+    <action type="external"/>
+  </simple>
 </properties>

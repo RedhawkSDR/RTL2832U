@@ -139,6 +139,9 @@ class RtlDevice
 
         std::vector<double> getClockRates();
 
+        void setFreqCorrection(int ppm);
+        int getFreqCorrection();
+
     private:
         // Device related data
         uint32_t m_channelNumber;
