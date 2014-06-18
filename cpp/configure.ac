@@ -13,20 +13,13 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Dependencies
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig"
-PKG_CHECK_MODULES([PROJECTDEPS], [ossie >= 1.10 omniORB4 >= 4.1.0  ])
+PKG_CHECK_MODULES([PROJECTDEPS], [ossie >= 1.10 omniORB4 >= 4.1.0 librtlsdr = 0.5.2  ])
 PKG_CHECK_MODULES([INTERFACEDEPS], [frontend >= 2.2, bulkio >= 1.10])
 OSSIE_ENABLE_LOG4CXX
 AX_BOOST_BASE([1.41])
 AX_BOOST_SYSTEM
 AX_BOOST_THREAD
 AX_BOOST_REGEX
-
-# RTL-SDR
-PKG_CHECK_MODULES(librtlsdr, librtlsdr = 0.5.2)
-AC_SUBST(librtlsdr_CFLAGS)
-AC_SUBST(librtlsdr_LIBS)
-CXXFLAGS="$CXXFLAGS $librtlsdr_CFLAGS"
-LIBS="$LIBS $librtlsdr_LIBS"
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
