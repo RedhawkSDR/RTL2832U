@@ -875,9 +875,8 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         // set RTL2832 AGC mode according to property value
         rtl_device_ptr->setAgcMode(RTL2832U_agc_enable);
 
-        // start with tuner gain mode set to manual with minimum gain setting
-        rtl_device_ptr->setGainMode(false);
-        rtl_device_ptr->setGain(rtl_capabilities.gain_min);
+        // start with tuner gain mode set to auto
+        rtl_device_ptr->setGainMode(true);
 
 
         // Initialize status vector
@@ -890,7 +889,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
             rtl_tuner.lock = new boost::mutex;
         rtl_tuner.reset();
 
-        frontend_tuner_status[0].agc = false; // this is the tuner gain mode, not RTL2832U AGC mode
+        frontend_tuner_status[0].agc = true; // this is the tuner gain mode, not RTL2832U AGC mode
         frontend_tuner_status[0].allocation_id_csv = "";
         frontend_tuner_status[0].tuner_type = "RX_DIGITIZER";
         frontend_tuner_status[0].center_frequency = rtl_device_ptr->getFreq();
