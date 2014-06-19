@@ -70,6 +70,9 @@
       <simple id="FRONTEND::tuner_status::tuner_type" name="tuner_type" type="string">
         <description>Example Tuner Types: TX, RX, CHANNELIZER, DDC, RX_DIGITIZER, RX_DIGTIZIER_CHANNELIZER</description>
       </simple>
+      <simple id="FRONTEND::tuner_status::stream_id" name="stream_id" type="string">
+        <description>Stream ID associated with tuner/allocation</description>
+      </simple>
     </struct>
     <configurationkind kindtype="configure"/>
   </structsequence>

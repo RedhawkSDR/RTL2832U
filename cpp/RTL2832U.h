@@ -7,7 +7,7 @@
 
 /** Device Individual Tuner. This structure contains stream specific data for channel/tuner to include:
  *      - Data buffer
- *      - Additional stream metadata (stream_id & timestamps)
+ *      - Additional stream metadata (timestamps)
  */
 struct rtlTunerStruct {
     rtlTunerStruct(){
@@ -34,14 +34,12 @@ struct rtlTunerStruct {
     size_t buffer_capacity; // num samps buffer can hold
     size_t buffer_size; // num samps in buffer
     BULKIO::PrecisionUTCTime output_buffer_time;
-    std::string stream_id;
     bool update_sri;
     boost::mutex *lock; // protects this structure as well as interfacing with RTL device/drivers
 
     void reset(){
         buffer_size = 0;
         bulkio::sri::zeroTime(output_buffer_time);
-        stream_id.clear();
         update_sri = false;
     };
     ~rtlTunerStruct(){
@@ -124,7 +122,7 @@ class RTL2832U_i : public RTL2832U_base
         frontend::RFInfoPkt rfinfo_pkt;
 
         // run-time rtl tuner tracking struct
-        // data buffer/stream_id/timestamps
+        // data buffer/timestamps
         // protected by rtl_tuner.lock
         rtlTunerStruct rtl_tuner;
 

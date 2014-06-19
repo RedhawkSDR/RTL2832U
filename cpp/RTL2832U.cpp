@@ -409,6 +409,7 @@ bool RTL2832U_i::deviceDeleteTuning(frontend_tuner_status_struct_struct &fts, si
     fts.sample_rate = 0.0;
     fts.bandwidth = 0.0;
     //fts.gain = 0.0; // this doesn't need to be reset since it's not part of allocation
+    fts.stream_id.clear();
     return true;
 }
 
@@ -789,13 +790,13 @@ void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short*
 Helper functions
 *************************************************************/
 std::string RTL2832U_i::getStreamId(){
-    if (rtl_tuner.stream_id.empty()){
+    if (frontend_tuner_status[0].stream_id.empty()){
         std::ostringstream id;
         id<<"tuner_freq_"<<long(frontend_tuner_status[0].center_frequency)<<"_Hz_"<<frontend::uuidGenerator();
-        rtl_tuner.stream_id = id.str();
+        frontend_tuner_status[0].stream_id = id.str();
         rtl_tuner.update_sri = true;
     }
-    return rtl_tuner.stream_id;
+    return frontend_tuner_status[0].stream_id;
 }
 
 /*************************************************************
@@ -915,6 +916,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         frontend_tuner_status[0].tuner_number = rtl_chan_num;
         frontend_tuner_status[0].enabled = false;
         frontend_tuner_status[0].complex = true;
+        frontend_tuner_status[0].stream_id.clear();
 
         sprintf(tmp,"%.2f-%.2f",rtl_capabilities.center_frequency_min,rtl_capabilities.center_frequency_max);
         frontend_tuner_status[0].available_frequency = std::string(tmp);
