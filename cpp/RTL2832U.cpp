@@ -782,7 +782,7 @@ void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short*
     exclusive_lock lock(prop_lock);
     if(rtl_device_ptr != NULL){
         rtl_device_ptr->setFreqCorrection(frequency_correction);
-    	frequency_correction = rtl_device_ptr->getFreqCorrection();
+        frequency_correction = rtl_device_ptr->getFreqCorrection();
     }
 }
 
@@ -890,7 +890,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         rtl_device_ptr->setGainMode(true);
 
         // get current frequency correction value
-    	frequency_correction = rtl_device_ptr->getFreqCorrection();
+        frequency_correction = rtl_device_ptr->getFreqCorrection();
 
 
         // Initialize status vector

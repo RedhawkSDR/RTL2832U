@@ -533,9 +533,9 @@ void RtlDevice::setFreqCorrection(int ppm){
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
     if (m_device) {
         uint32_t r;
-    	if((r = rtlsdr_set_freq_correction(m_device,ppm)) != 0){
-    		LOG_WARN(RtlDevice, "Unable to set frequency correction value");
-    	}
+        if((r = rtlsdr_set_freq_correction(m_device,ppm)) != 0){
+            LOG_WARN(RtlDevice, "Unable to set frequency correction value");
+        }
     }
 }
 
@@ -546,7 +546,7 @@ void RtlDevice::setFreqCorrection(int ppm){
 int RtlDevice::getFreqCorrection(){
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
     if (m_device) {
-    	return rtlsdr_get_freq_correction(m_device);
+        return rtlsdr_get_freq_correction(m_device);
     }
     return 0;
 }
