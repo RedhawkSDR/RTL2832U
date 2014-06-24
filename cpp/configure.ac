@@ -13,8 +13,9 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Dependencies
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig"
-PKG_CHECK_MODULES([PROJECTDEPS], [ossie >= 1.10 omniORB4 >= 4.1.0 librtlsdr = 0.5.2  ])
-PKG_CHECK_MODULES([INTERFACEDEPS], [frontend >= 2.2, bulkio >= 1.10])
+PKG_CHECK_MODULES([PROJECTDEPS], [ossie >= 1.10 omniORB4 >= 4.1.0  ])
+PKG_CHECK_MODULES([INTERFACEDEPS], [frontend >= 2.2 bulkio >= 1.10 ])
+PKG_CHECK_MODULES([LIBRTLSDR], [librtlsdr = 0.5.2 libusb-1.0 >= 1.0.0 ])
 OSSIE_ENABLE_LOG4CXX
 AX_BOOST_BASE([1.41])
 AX_BOOST_SYSTEM
