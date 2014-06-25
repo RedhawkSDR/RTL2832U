@@ -1,3 +1,23 @@
+#
+# This file is protected by Copyright. Please refer to the COPYRIGHT file
+# distributed with this source distribution.
+#
+# This file is part of RTL2832U Device.
+#
+# RTL2832U Device is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+
 # By default, the RPM will install to the standard REDHAWK SDR root location (/var/redhawk/sdr)
 # You can override this at install time using --prefix /new/sdr/root when invoking rpm (preferred method, if you must)
 %{!?_sdrroot: %define _sdrroot /var/redhawk/sdr}
@@ -26,6 +46,12 @@ Requires:       redhawk >= 1.10
 # Interface requirements
 BuildRequires:  frontendInterfaces >= 2.2 bulkioInterfaces >= 1.10
 Requires:       frontendInterfaces >= 2.2 bulkioInterfaces >= 1.10
+
+# RTL requirements
+BuildRequires:  libusb1-devel >= 1.0.0
+BuildRequires:  librtlsdr >= 0.5.2
+Requires:       librtlsdr >= 0.5.2
+
 
 %description
 Device %{name}
