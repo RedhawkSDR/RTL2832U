@@ -108,7 +108,7 @@ class RtlDevice
         enum stream_cmd_t { STREAM_MODE_START_CONTINUOUS = 0, STREAM_MODE_STOP_CONTINUOUS = 1 };
 
     public:
-        uint32_t recv(float *floatOutputBuffer, unsigned char *octetOutputBuffer, uint32_t maxLength);
+        uint32_t recv(float *floatOutputBuffer, uint8_t *octetOutputBuffer, uint32_t maxLength);
         void issueStreamCmd(stream_cmd_t cmd);
 
     // Getters and Setters
@@ -142,10 +142,14 @@ class RtlDevice
         void setFreqCorrection(int ppm);
         int getFreqCorrection();
 
+        void getUsbStrings(char *vendor, char * product, char *serial);
+        void getName(char *name);
+
     private:
         // Device related data
         uint32_t m_channelNumber;
         rtlsdr_dev_t *m_device;
+        char m_deviceName[256];
         char m_vendor[256];
         char m_product[256];
         char m_serial[256];
@@ -168,7 +172,7 @@ class RtlDevice
         bool m_startWriting;
 
         void threadFunction();
-        static void rtlCallback(unsigned char *buf, uint32_t len, void *ctx);
+        static void rtlCallback(uint8_t *buf, uint32_t len, void *ctx);
 };
 
 #endif /* RTLDEVICE_H_ */

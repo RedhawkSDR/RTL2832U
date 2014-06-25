@@ -59,10 +59,10 @@ RtlDevice::RtlDevice(uint32_t channelNumber)
                 LOG_INFO(RtlDevice, "Unable to get device USB strings of index " << m_channelNumber);
             }
 
-            const char *deviceName = rtlsdr_get_device_name(m_channelNumber);
+            strncpy(m_deviceName, rtlsdr_get_device_name(m_channelNumber), 256);
 
-            if (deviceName) {
-                LOG_INFO(RtlDevice, "Using device " << deviceName << " at index " << m_channelNumber);
+            if (m_deviceName) {
+                LOG_INFO(RtlDevice, "Using device " << m_deviceName << " at index " << m_channelNumber);
             } else {
                 LOG_INFO(RtlDevice, "Unable to get device name of index " << m_channelNumber);
             }
@@ -143,7 +143,7 @@ RtlDevice::RtlDevice(uint32_t channelNumber)
  * and the number of elements to read.  It returns the number of
  * elements read
  */
-uint32_t RtlDevice::recv(float *floatOutputBuffer, unsigned char *octetOutputBuffer, uint32_t maxLength)
+uint32_t RtlDevice::recv(float *floatOutputBuffer, uint8_t *octetOutputBuffer, uint32_t maxLength)
 {
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
 
@@ -157,8 +157,6 @@ uint32_t RtlDevice::recv(float *floatOutputBuffer, unsigned char *octetOutputBuf
     }
 
     if (floatOutputBuffer && octetOutputBuffer) {
-        m_startWriting = true;
-
         uint32_t numRead = 0;
 
         // This loop will read data from the internal buffer until the specified
@@ -171,17 +169,17 @@ uint32_t RtlDevice::recv(float *floatOutputBuffer, unsigned char *octetOutputBuf
                 while (m_curRead == m_curWrite) {  // Probably don't need while loop since only one thread is waiting for the condition
                     const boost::system_time timeout = boost::get_system_time() + boost::posix_time::milliseconds(500);
 
-                    if (!m_dataCondition.timed_wait(lock, timeout)) {
-                        if (m_dataRecvThread) {
+                    if (not m_dataCondition.timed_wait(lock, timeout)) {
+                        if (m_dataRecvThread) {    // The device reading thread seems to have hung
                             LOG_ERROR(RtlDevice, "Unexpected condition timeout while waiting to receive more data");
-                        } else {
+                        } else { // The device reading thread was stopped and no condition was signalled
                             LOG_INFO(RtlDevice, "The device was stopped while waiting to receive more data");
                         }
 
                         return numRead;
                     }
 
-                    if (not m_dataRecvThread) { // The device was stopped while waiting for the condition
+                    if (not m_dataRecvThread) { // The device reading thread was stopped and a condition was signalled
                         return numRead;
                     }
                 }
@@ -198,7 +196,7 @@ uint32_t RtlDevice::recv(float *floatOutputBuffer, unsigned char *octetOutputBuf
             }
         }
 
-        return maxLength;
+        return numRead;
     } else {
         LOG_WARN(RtlDevice, "Unable to write to output buffer: Output buffer is NULL");
     }
@@ -224,7 +222,7 @@ void RtlDevice::issueStreamCmd(stream_cmd_t cmd)
     switch (cmd) {
         case STREAM_MODE_START_CONTINUOUS: {
             if (m_dataRecvThread) {
-                LOG_WARN(RtlDevice, "Unable to start streaming: Already streaming");
+                LOG_DEBUG(RtlDevice, "Unable to start streaming: Already streaming");
                 return;
             }
 
@@ -235,17 +233,17 @@ void RtlDevice::issueStreamCmd(stream_cmd_t cmd)
 
             m_dataRecvThread = new boost::thread(&RtlDevice::threadFunction, this);
 
+            m_startWriting = true;
+
             LOG_INFO(RtlDevice, "Streaming started");
 
             break;
         }
         case STREAM_MODE_STOP_CONTINUOUS: {
             if (not m_dataRecvThread) {
-                LOG_WARN(RtlDevice, "Unable to stop streaming: Already stopped");
+                LOG_DEBUG(RtlDevice, "Unable to stop streaming: Already stopped");
                 return;
             }
-
-            m_startWriting = false;
 
             // Cancel the asynchronous read, wait for the thread to finish, and destroy
             // the mutex lock and condition variable
@@ -259,6 +257,10 @@ void RtlDevice::issueStreamCmd(stream_cmd_t cmd)
                     exit(1);
                 }
             }
+
+            m_startWriting = false;
+
+            m_dataCondition.notify_all();
 
             m_dataRecvThread->join();
 
@@ -407,17 +409,17 @@ void RtlDevice::setFreq(double freq)
         int r;
 
         if (freq < m_frequencyRange.start()) {
-            LOG_WARN(RtlDevice, "Desired center frequency " << freq << " less than minimum");
+            LOG_WARN(RtlDevice, "Desired center frequency " << freq << " Hz less than minimum of " << m_frequencyRange.start() << " Hz");
             freq = m_frequencyRange.start();
         } else if (freq > m_frequencyRange.stop()) {
-            LOG_WARN(RtlDevice, "Desired center frequency " << freq << " greater than maximum");
+            LOG_WARN(RtlDevice, "Desired center frequency " << freq << " Hz greater than maximum of " << m_frequencyRange.stop() << " Hz");
             freq = m_frequencyRange.stop();
         }
 
         if ((r = rtlsdr_set_center_freq(m_device, (uint32_t) freq)) < 0) {
-            LOG_WARN(RtlDevice, "Unable to set frequency to " << freq << " with error " << r);
+            LOG_WARN(RtlDevice, "Unable to set frequency to " << freq << " Hz with error " << r);
         } else {
-            LOG_INFO(RtlDevice, "Center frequency set to " << freq);
+            LOG_INFO(RtlDevice, "Center frequency set to " << freq << " Hz");
         }
     }
 }
@@ -457,17 +459,17 @@ void RtlDevice::setRate(double rate)
 
     if (m_device) {
         if (rate < m_rateRange.start()) {
-            LOG_WARN(RtlDevice, "Desired sample rate " << rate << " less than minimum");
+            LOG_WARN(RtlDevice, "Desired sample rate " << rate << " sps less than minimum of " << m_rateRange.start() <<  " sps");
             rate = m_rateRange.start();
         } else if (rate > m_rateRange.stop()) {
-            LOG_WARN(RtlDevice, "Desired sample rate " << rate << " greater than maximum");
+            LOG_WARN(RtlDevice, "Desired sample rate " << rate << " sps greater than maximum of " << m_rateRange.stop() << " sps");
             rate = m_rateRange.stop();
         }
 
         if (rtlsdr_set_sample_rate(m_device, (uint32_t) rate) < 0) {
             LOG_WARN(RtlDevice, "Unable to set sample rate to " << rate << " sps");
         } else {
-            LOG_INFO(RtlDevice, "Sample rate set to " << rate);
+            LOG_INFO(RtlDevice, "Sample rate set to " << rate << " sps");
         }
     } else {
         LOG_WARN(RtlDevice, "Unable to set sample rate: Could not open RTL device "<<m_channelNumber);
@@ -551,6 +553,38 @@ int RtlDevice::getFreqCorrection(){
     return 0;
 }
 
+/* Copy the usb strings into the given pointers.  It's up
+ * to the user to guarantee at least 256 characters for each
+ */
+void RtlDevice::getUsbStrings(char *vendor, char *product, char *serial)
+{
+    LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
+
+    if (vendor) {
+        strncpy(vendor, m_vendor, 256);
+    }
+
+    if (product) {
+        strncpy(product, m_product, 256);
+    }
+
+    if (serial) {
+        strncpy(serial, m_serial, 256);
+    }
+}
+
+/* Copy the device name into the given pointer.  It's up
+ * to the user to guarantee at least 256 characters
+ */
+void RtlDevice::getName(char *name)
+{
+    LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
+
+    if (name) {
+        strncpy(name, m_deviceName, 256);
+    }
+}
+
 /* The function passed to the boost::thread object.  This
  * method simply resets the asynchronous buffer and calls
  * the blocking asynchronous read function
@@ -577,7 +611,7 @@ void RtlDevice::threadFunction()
  * index are not the same and signals if this condition is
  * true
  */
-void RtlDevice::rtlCallback(unsigned char *buf, uint32_t len, void *ctx)
+void RtlDevice::rtlCallback(uint8_t *buf, uint32_t len, void *ctx)
 {
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
 
@@ -588,7 +622,7 @@ void RtlDevice::rtlCallback(unsigned char *buf, uint32_t len, void *ctx)
         return;
     }
 
-    if (!device->m_startWriting) {
+    if (not device->m_startWriting) {
         return;
     }
 
@@ -614,9 +648,9 @@ RtlDevice::~RtlDevice()
         for (uint32_t i=0; i < m_NUM_BUFFERS; ++i) {
             delete[] m_buffer[i];
         }
-    }
 
-    delete[] m_buffer;
+        delete[] m_buffer;
+    }
 
     if (rtlsdr_close(m_device)) {
         LOG_WARN(RtlDevice, "Unable to close RTL device " << rtlsdr_get_device_name(m_channelNumber));
