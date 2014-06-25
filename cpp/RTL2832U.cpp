@@ -976,17 +976,15 @@ long RTL2832U_i::rtlReceive(double timeout){
         samps_to_rx = std::min(samps_to_rx, size_t(timeout*frontend_tuner_status[0].sample_rate));
     }
 
-    struct timeval time;
-    struct timezone tz;
+    BULKIO::PrecisionUTCTime time;
 
     // RTL device recv function asks for max length (num elements) rather than max samples,
     // so multiply the samps_to_rx by 2 (2 elements = 1 sample)
     size_t max_length = 2*samps_to_rx;
     // RTL device recv function also returns num elements, so divide by 2 to get num samps
     size_t num_elements = rtl_device_ptr->recv(&rtl_tuner.float_output_buffer.front(), &rtl_tuner.octet_output_buffer.front(), max_length);
+    time = bulkio::time::utils::now();
     size_t num_samps = num_elements/2;
-
-    gettimeofday(&time, &tz);
 
     LOG_TRACE(RTL2832U_i, "rtlReceive|num_samps=" << num_samps);
     // Note: multiply by 2 b/c two elements in buffer represent a single complex sample
@@ -1001,9 +999,7 @@ long RTL2832U_i::rtlReceive(double timeout){
     // if first samples in buffer, update timestamps
     // Note: multiply by 2 b/c two elements in buffer represent a single complex sample
     if(num_samps*2 == rtl_tuner.buffer_size){
-        rtl_tuner.output_buffer_time = bulkio::time::utils::now();
-        rtl_tuner.output_buffer_time.twsec = time.tv_sec;
-        rtl_tuner.output_buffer_time.tfsec = time.tv_usec / 1e6;
+        rtl_tuner.output_buffer_time = time;
     }
 
     return num_samps;
