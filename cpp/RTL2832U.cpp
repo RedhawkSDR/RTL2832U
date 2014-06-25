@@ -272,7 +272,7 @@ void RTL2832U_i::construct()
 
     // set some default values that should get overwritten by correct values
     group_id = "RTL_GROUP_ID_NOT_SET";
-    RTL2832U_agc_enable = false;
+    digital_agc_enable = false;
 
     target_device.index = -1;
     target_device.name.clear();
@@ -293,7 +293,7 @@ void RTL2832U_i::construct()
 
     addPropertyChangeListener("target_device", this, &RTL2832U_i::targetDeviceChanged);
     addPropertyChangeListener("group_id", this, &RTL2832U_i::groupIdChanged);
-    addPropertyChangeListener("RTL2832U_agc_enable", this, &RTL2832U_i::rtl2832uAgcEnableChanged);
+    addPropertyChangeListener("digital_agc_enable", this, &RTL2832U_i::rtl2832uAgcEnableChanged);
     addPropertyChangeListener("update_available_devices", this, &RTL2832U_i::updateAvailableDevicesChanged);
     addPropertyChangeListener("frequency_correction", this, &RTL2832U_i::frequencyCorrectionChanged);
 
@@ -471,7 +471,8 @@ void RTL2832U_i::setTunerCenterFrequency(const std::string& allocation_id, doubl
         if (frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_min)<0 ||
                 frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_max)>0){
             std::ostringstream msg;
-            msg << "setTunerCenterFrequency|INVALID CENTER FREQUENCY (" << freq <<")";
+            msg << "setTunerCenterFrequency|Invalid center frequency (" << freq <<"). Center frequency must be between "
+                << rtl_capabilities.center_frequency_min << " and " << rtl_capabilities.center_frequency_max << " Hz";
             LOG_WARN(RTL2832U_i,msg.str() );
             throw FRONTEND::BadParameterException(msg.str().c_str());
         }
@@ -485,7 +486,7 @@ void RTL2832U_i::setTunerCenterFrequency(const std::string& allocation_id, doubl
 
     } catch (std::exception& e) {
         std::ostringstream msg;
-        msg << "setTunerCenterFrequency|EXCEPTION: " << e.what();
+        msg << "setTunerCenterFrequency|Exception: " << e.what();
         LOG_WARN(RTL2832U_i,msg.str() );
         throw FRONTEND::FrontendException(msg.str().c_str());
     }
@@ -567,7 +568,7 @@ void RTL2832U_i::setTunerGain(const std::string& allocation_id, float gain)
 
     } catch (std::exception& e) {
         std::ostringstream msg;
-        msg << "setTunerGain|EXCEPTION: " << e.what();
+        msg << "setTunerGain|Exception: " << e.what();
         LOG_WARN(RTL2832U_i,msg.str() );
         throw FRONTEND::FrontendException(msg.str().c_str());
     }
@@ -621,7 +622,8 @@ void RTL2832U_i::setTunerOutputSampleRate(const std::string& allocation_id, doub
         if (frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_min)<0 ||
                 frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_max)>0){
             std::ostringstream msg;
-            msg << "setTunerOutputSampleRate|INVALID SAMPLE RATE (" << sr <<")";
+            msg << "setTunerOutputSampleRate|Invalid sample rate (" << sr <<"). Sample rate must be between "
+                << rtl_capabilities.sample_rate_min << " and " << rtl_capabilities.sample_rate_max << " sps.";
             LOG_WARN(RTL2832U_i,msg.str() );
             throw FRONTEND::BadParameterException(msg.str().c_str());
         }
@@ -637,7 +639,7 @@ void RTL2832U_i::setTunerOutputSampleRate(const std::string& allocation_id, doub
 
     } catch (std::exception& e) {
         std::ostringstream msg;
-        msg << "setTunerOutputSampleRate|EXCEPTION: " << e.what();
+        msg << "setTunerOutputSampleRate|Exception: " << e.what();
         LOG_WARN(RTL2832U_i,msg.str() );
         throw FRONTEND::FrontendException(msg.str().c_str());
     }
@@ -663,7 +665,7 @@ std::string RTL2832U_i::get_rf_flow_id(const std::string& port_name)
         exclusive_lock lock(prop_lock);
         return rfinfo_pkt.rf_flow_id;
     } else {
-        LOG_WARN(RTL2832U_i, "get_rf_flow_id|UNKNOWN PORT NAME: " << port_name);
+        LOG_WARN(RTL2832U_i, "get_rf_flow_id|Unknown port name: " << port_name);
         return std::string("none");
     }
 }
@@ -678,7 +680,7 @@ void RTL2832U_i::set_rf_flow_id(const std::string& port_name, const std::string&
         frontend_tuner_status[0].rf_flow_id = id;
         rtl_tuner.update_sri = true;
     } else {
-        LOG_WARN(RTL2832U_i, "set_rf_flow_id|UNKNOWN PORT NAME: " << port_name);
+        LOG_WARN(RTL2832U_i, "set_rf_flow_id|Unknown port name: " << port_name);
     }
 }
 
@@ -688,7 +690,7 @@ frontend::RFInfoPkt RTL2832U_i::get_rfinfo_pkt(const std::string& port_name)
 
     frontend::RFInfoPkt pkt;
     if( port_name != "RFInfo_in"){
-        LOG_WARN(RTL2832U_i, "get_rfinfo_pkt|UNKNOWN PORT NAME: " << port_name);
+        LOG_WARN(RTL2832U_i, "get_rfinfo_pkt|Unknown port name: " << port_name);
         return pkt;
     }
     exclusive_lock lock(prop_lock);
@@ -747,7 +749,7 @@ void RTL2832U_i::set_rfinfo_pkt(const std::string& port_name, const frontend::RF
         frontend_tuner_status[0].rf_flow_id = pkt.rf_flow_id;
         rtl_tuner.update_sri = true;
     } else {
-        LOG_WARN(RTL2832U_i, "set_rfinfo_pkt|UNKNOWN PORT NAME: " + port_name);
+        LOG_WARN(RTL2832U_i, "set_rfinfo_pkt|Unknown port name: " + port_name);
     }
 }
 
@@ -779,7 +781,7 @@ void RTL2832U_i::rtl2832uAgcEnableChanged(const bool* old_value, const bool* new
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     exclusive_lock lock(prop_lock);
     if(rtl_device_ptr != NULL)
-        rtl_device_ptr->setAgcMode(RTL2832U_agc_enable);
+        rtl_device_ptr->setAgcMode(digital_agc_enable);
 }
 void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, const target_device_struct* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
@@ -797,7 +799,7 @@ void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, cons
         try{
             initRtl();
         }catch(...){
-            LOG_WARN(RTL2832U_i,"CAUGHT EXCEPTION WHEN INITIALIZING RTL DEVICE. WAITING 1 SECOND AND TRYING AGAIN");
+            LOG_WARN(RTL2832U_i,"Caught exception when initializing rtl device. Waiting 1 second and trying again");
             sleep(1);
             initRtl();
         }
@@ -817,6 +819,8 @@ void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short*
     if(rtl_device_ptr != NULL){
         rtl_device_ptr->setFreqCorrection(frequency_correction);
         frequency_correction = rtl_device_ptr->getFreqCorrection();
+    } else {
+        frequency_correction = *old_value;
     }
 }
 
@@ -845,7 +849,7 @@ void RTL2832U_i::updateAvailableDevices(){
     uint32_t num_devices = rtlsdr_get_device_count();
 
     if (num_devices == 0) {
-        LOG_WARN(RTL2832U_i, "WARNING: NO RTL DEVICES FOUND!\n");
+        LOG_WARN(RTL2832U_i, "No rtl devices found\n");
     }
 
     for (uint32_t i = 0; i < num_devices; i++) {
@@ -904,6 +908,12 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
             rtl_device_ptr = NULL;
         }
         rtl_device_ptr = new RtlDevice(rtl_chan_num);
+        // update current device property
+        current_device.index = rtl_chan_num;
+        current_device.name = available_devices[rtl_chan_num].name;
+        current_device.product = available_devices[rtl_chan_num].product;
+        current_device.vendor = available_devices[rtl_chan_num].vendor;
+        current_device.serial = available_devices[rtl_chan_num].serial;
 
         // read RTL device capabilities
         rtl_capabilities.center_frequency_max = rtl_device_ptr->getFreqRange().stop();
@@ -918,7 +928,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         rtl_device_ptr->setFreq(setFreq);
 
         // set RTL2832 AGC mode according to property value
-        rtl_device_ptr->setAgcMode(RTL2832U_agc_enable);
+        rtl_device_ptr->setAgcMode(digital_agc_enable);
 
         // start with tuner gain mode set to auto
         rtl_device_ptr->setGainMode(true);
@@ -960,7 +970,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         frontend_tuner_status[0].available_sample_rate = std::string(tmp);
 
     } catch (...) {
-        LOG_ERROR(RTL2832U_i,"RTL DEVICE COULD NOT BE INITIALIZED!");
+        LOG_ERROR(RTL2832U_i,"rtl device could not be initialized");
         throw CF::PropertySet::InvalidConfiguration();
     }
 }

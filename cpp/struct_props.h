@@ -112,6 +112,80 @@ inline bool operator!= (const target_device_struct& s1, const target_device_stru
     return !(s1==s2);
 };
 
+struct current_device_struct {
+    current_device_struct ()
+    {
+    };
+
+    static std::string getId() {
+        return std::string("current_device");
+    };
+
+    std::string name;
+    std::string vendor;
+    std::string product;
+    std::string serial;
+    unsigned short index;
+};
+
+inline bool operator>>= (const CORBA::Any& a, current_device_struct& s) {
+    CF::Properties* temp;
+    if (!(a >>= temp)) return false;
+    CF::Properties& props = *temp;
+    for (unsigned int idx = 0; idx < props.length(); idx++) {
+        if (!strcmp("current::rtl::name", props[idx].id)) {
+            if (!(props[idx].value >>= s.name)) return false;
+        }
+        else if (!strcmp("current::rtl::vendor", props[idx].id)) {
+            if (!(props[idx].value >>= s.vendor)) return false;
+        }
+        else if (!strcmp("current::rtl::product", props[idx].id)) {
+            if (!(props[idx].value >>= s.product)) return false;
+        }
+        else if (!strcmp("current::rtl::serial", props[idx].id)) {
+            if (!(props[idx].value >>= s.serial)) return false;
+        }
+        else if (!strcmp("current::rtl::index", props[idx].id)) {
+            if (!(props[idx].value >>= s.index)) return false;
+        }
+    }
+    return true;
+};
+
+inline void operator<<= (CORBA::Any& a, const current_device_struct& s) {
+    CF::Properties props;
+    props.length(5);
+    props[0].id = CORBA::string_dup("current::rtl::name");
+    props[0].value <<= s.name;
+    props[1].id = CORBA::string_dup("current::rtl::vendor");
+    props[1].value <<= s.vendor;
+    props[2].id = CORBA::string_dup("current::rtl::product");
+    props[2].value <<= s.product;
+    props[3].id = CORBA::string_dup("current::rtl::serial");
+    props[3].value <<= s.serial;
+    props[4].id = CORBA::string_dup("current::rtl::index");
+    props[4].value <<= s.index;
+    a <<= props;
+};
+
+inline bool operator== (const current_device_struct& s1, const current_device_struct& s2) {
+    if (s1.name!=s2.name)
+        return false;
+    if (s1.vendor!=s2.vendor)
+        return false;
+    if (s1.product!=s2.product)
+        return false;
+    if (s1.serial!=s2.serial)
+        return false;
+    if (s1.index!=s2.index)
+        return false;
+    return true;
+};
+
+inline bool operator!= (const current_device_struct& s1, const current_device_struct& s2) {
+    return !(s1==s2);
+};
+
 struct frontend_tuner_status_struct_struct : public frontend::default_frontend_tuner_status_struct_struct {
     frontend_tuner_status_struct_struct () : frontend::default_frontend_tuner_status_struct_struct()
     {
@@ -269,7 +343,6 @@ inline bool operator!= (const frontend_tuner_status_struct_struct& s1, const fro
 struct rtl_device_struct_struct {
     rtl_device_struct_struct ()
     {
-        index = 0;
     };
 
     static std::string getId() {

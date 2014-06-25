@@ -125,10 +125,10 @@ void RTL2832U_base::loadProperties()
                 "external",
                 "execparam,configure");
 
-    addProperty(RTL2832U_agc_enable,
+    addProperty(digital_agc_enable,
                 false,
-                "RTL2832U_agc_enable",
-                "RTL2832U_agc_enable",
+                "digital_agc_enable",
+                "digital_agc_enable",
                 "readwrite",
                 "",
                 "external",
@@ -150,6 +150,15 @@ void RTL2832U_base::loadProperties()
                 "target_device",
                 "target_device",
                 "readwrite",
+                "",
+                "external",
+                "configure");
+
+    addProperty(current_device,
+                current_device_struct(),
+                "current_device",
+                "current_device",
+                "readonly",
                 "",
                 "external",
                 "configure");

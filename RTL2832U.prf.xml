@@ -164,7 +164,6 @@ False: Does not need control and can just attach to any currently tasked device 
       </simple>
       <simple id="available_devices::rtl::index" name="index" type="ushort">
         <description>The index of the rtl dongle</description>
-        <value>0</value>
       </simple>
     </struct>
     <configurationkind kindtype="configure"/>
@@ -193,6 +192,25 @@ False: Does not need control and can just attach to any currently tasked device 
     </simple>
     <configurationkind kindtype="configure"/>
   </struct>
+  <struct id="current_device" mode="readonly" name="current_device">
+    <description>Information about the currently targeted rtl dongle</description>
+    <simple id="current::rtl::name" name="name" type="string">
+      <description>The name of the rtl dongle</description>
+    </simple>
+    <simple id="current::rtl::vendor" name="vendor" type="string">
+      <description>The vendor of the rtl dongle</description>
+    </simple>
+    <simple id="current::rtl::product" name="product" type="string">
+      <description>The product number of the rtl dongle</description>
+    </simple>
+    <simple id="current::rtl::serial" name="serial" type="string">
+      <description>The serial number of the rtl dongle</description>
+    </simple>
+    <simple id="current::rtl::index" name="index" type="ushort">
+      <description>The index of the rtl dongle</description>
+    </simple>
+    <configurationkind kindtype="configure"/>
+  </struct>
   <simple id="update_available_devices" mode="readwrite" name="update_available_devices" type="boolean">
     <description>When set to true, the available_devices property will be updated with all available RTL devices found on the host.</description>
     <value>False</value>
@@ -206,8 +224,8 @@ False: Does not need control and can just attach to any currently tasked device 
     <kind kindtype="execparam"/>
     <action type="external"/>
   </simple>
-  <simple id="RTL2832U_agc_enable" mode="readwrite" name="RTL2832U_agc_enable" type="boolean">
-    <description>Sets the AGC mode of the RTL2832U, which is different from the gain mode of the tuner. Gain mode of the tuner is set using the tuner port setTunerAgcEnable function.</description>
+  <simple id="digital_agc_enable" mode="readwrite" name="digital_agc_enable" type="boolean">
+    <description>Sets the digital AGC mode of the RTL2832U chip, which is different from the gain mode of the tuner. Gain mode of the tuner is set using the tuner port setTunerAgcEnable function.</description>
     <value>False</value>
     <kind kindtype="configure"/>
     <action type="external"/>
