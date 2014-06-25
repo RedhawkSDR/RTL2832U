@@ -262,6 +262,26 @@ int RTL2832U_i::serviceFunction()
     return NOOP;
 }
 
+void RTL2832U_i::initialize() throw (CF::LifeCycle::InitializeError, CORBA::SystemException)
+{
+    RTL2832U_base::initialize();
+
+    // try to find an available RTL
+    { // scope for prop_lock
+        exclusive_lock lock(prop_lock);
+        try{
+            initRtl();
+        } catch(CF::PropertySet::InvalidConfiguration& e) {
+            LOG_INFO(RTL2832U_i,"No available RTL devices found upon startup")
+        }
+    }
+
+    /** As of the REDHAWK 1.8.3 release, device are not started automatically by the node. Therefore
+     *  the device must start itself. */
+    start();
+
+}
+
 void RTL2832U_i::construct()
 {
     /***********************************************************************************
@@ -301,10 +321,6 @@ void RTL2832U_i::construct()
         update_available_devices = false;
         updateAvailableDevices();
     }
-
-    /** As of the REDHAWK 1.8.3 release, device are not started automatically by the node. Therefore
-     *  the device must start itself. */
-    start();
 }
 
 /*************************************************************
@@ -871,43 +887,75 @@ void RTL2832U_i::updateAvailableDevices(){
 void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     try {
-
-        // update available devices
-        updateAvailableDevices();
-
-        // find target
-        // check index first, and if found ignore all else
-        // if specified but invalid index, raise exception
-        short rtl_chan_num = -1;
-
-        if( target_device.index >= 0){
-            if (target_device.index < (short)available_devices.size()){
-                rtl_chan_num = target_device.index;
-            }
-        } else {
-            // index not specified, let's try to find a matching device
-            for (size_t i = 0; i < available_devices.size(); i++) {
-                // if specified, values must match.
-                if( (target_device.name.empty() || target_device.name == available_devices[i].name) &&
-                    (target_device.serial.empty() || target_device.serial == available_devices[i].serial) &&
-                    (target_device.vendor.empty() || target_device.vendor == available_devices[i].vendor) &&
-                    (target_device.product.empty() || target_device.product == available_devices[i].product) ){
-                    rtl_chan_num = i;
-                    break;
-                }
-            }
-        }
-
-        // if found, close existing RTL device (if applicable) and connect to new RTL device
-        if( rtl_chan_num < 0){
-            LOG_ERROR(RTL2832U_i,"COULD NOT FIND MATCHING RTL DEVICE!");
-            throw CF::PropertySet::InvalidConfiguration();
-        }
+        // clear current configuration
         if(rtl_device_ptr != NULL){
             delete rtl_device_ptr;
             rtl_device_ptr = NULL;
         }
-        rtl_device_ptr = new RtlDevice(rtl_chan_num);
+        setNumChannels(0);
+        current_device.index = -1;
+        current_device.name.clear();
+        current_device.product.clear();
+        current_device.vendor.clear();
+        current_device.serial.clear();
+        rtl_tuner.reset();
+        digital_agc_enable = false;
+
+        // update available devices
+        updateAvailableDevices();
+
+        // find target. check index first, and if specified, ignore all else
+        size_t rtl_chan_num;
+        if( target_device.index >= 0){ // index specified
+            if (target_device.index < (short)available_devices.size()){
+                rtl_chan_num = (size_t)target_device.index;
+
+                try {
+                    rtl_device_ptr = new RtlDevice(rtl_chan_num);
+                } catch(...){
+                    LOG_ERROR(RTL2832U_i,"Unable to create RtlDevice instance using channel number " << rtl_chan_num);
+                    rtl_device_ptr = NULL;
+                    throw CF::PropertySet::InvalidConfiguration();
+                }
+                if (rtl_device_ptr->get() == NULL){
+                    LOG_ERROR(RTL2832U_i,"Unable to create RtlDevice instance using channel number " << rtl_chan_num);
+                    delete rtl_device_ptr;
+                    rtl_device_ptr = NULL;
+                    throw CF::PropertySet::InvalidConfiguration();
+                }
+            } else {
+                LOG_ERROR(RTL2832U_i,"InvalidConfiguration: Specified index is out of range");
+                throw CF::PropertySet::InvalidConfiguration();
+            }
+        } else { // index not specified, let's try to find a matching device
+            for (rtl_chan_num = 0; rtl_chan_num < available_devices.size(); rtl_chan_num++) {
+                // if specified, values must match.
+                if( (target_device.name.empty() || target_device.name == available_devices[rtl_chan_num].name) &&
+                    (target_device.serial.empty() || target_device.serial == available_devices[rtl_chan_num].serial) &&
+                    (target_device.vendor.empty() || target_device.vendor == available_devices[rtl_chan_num].vendor) &&
+                    (target_device.product.empty() || target_device.product == available_devices[rtl_chan_num].product) ){
+                    // found a match, let's try to connect
+                    try {
+                        rtl_device_ptr = new RtlDevice(rtl_chan_num);
+                    } catch(...){
+                        LOG_INFO(RTL2832U_i,"Unable to create RtlDevice instance using channel number " << rtl_chan_num << ", searching for another.");
+                        rtl_device_ptr = NULL;
+                    }
+                    if (rtl_device_ptr->get() == NULL){
+                        LOG_INFO(RTL2832U_i,"Unable to create RtlDevice instance using channel number " << rtl_chan_num << ", searching for another.");
+                        delete rtl_device_ptr;
+                        rtl_device_ptr = NULL;
+                    }
+                    // if we made it here, we're successful. break out to prevent incrementing rtl_chan_num
+                    break;
+                }
+            }
+            if (rtl_device_ptr == NULL){
+                LOG_ERROR(RTL2832U_i,"Could not find matching rtl device");
+                throw CF::PropertySet::InvalidConfiguration();
+            }
+        }
+
         // update current device property
         current_device.index = rtl_chan_num;
         current_device.name = available_devices[rtl_chan_num].name;

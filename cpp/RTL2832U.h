@@ -95,6 +95,7 @@ class RTL2832U_i : public RTL2832U_base
         RTL2832U_i(char *devMgr_ior, char *id, char *lbl, char *sftwrPrfl, CF::Properties capacities, char *compDev);
         ~RTL2832U_i();
         int serviceFunction();
+        void initialize() throw (CF::LifeCycle::InitializeError, CORBA::SystemException);
 
     protected:
         std::string getTunerType(const std::string& allocation_id);
