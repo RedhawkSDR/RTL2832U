@@ -28,8 +28,6 @@
 *******************************************************************************************/
 
 #include <ossie/CorbaUtils.h>
-#include <bulkio/bulkio.h>
-typedef bulkio::connection_descriptor_struct connection_descriptor_struct;
 
 #include <frontend/fe_tuner_struct_props.h>
 

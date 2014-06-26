@@ -132,20 +132,6 @@ False: Does not need control and can just attach to any currently tasked device 
     </simple>
     <configurationkind kindtype="allocation"/>
   </struct>
-  <structsequence id="connectionTable" mode="readonly">
-    <struct id="connectionTable::connection_descriptor" name="connection_descriptor">
-      <simple id="connectionTable::connection_id" name="connection_id" type="string">
-        <kind kindtype="configure"/>
-      </simple>
-      <simple id="connectionTable::stream_id" name="stream_id" type="string">
-        <kind kindtype="configure"/>
-      </simple>
-      <simple id="connectionTable::port_name" name="port_name" type="string">
-        <kind kindtype="configure"/>
-      </simple>
-    </struct>
-    <configurationkind kindtype="configure"/>
-  </structsequence>
   <structsequence id="available_devices" mode="readonly" name="available_devices">
     <description>A list of the available RTL devices connected to the host</description>
     <struct id="available_devices::rtl_device_struct" name="rtl_device_struct">

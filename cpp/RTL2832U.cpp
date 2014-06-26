@@ -402,11 +402,6 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
     // creates a stream id if not already created for this tuner
     std::string stream_id = getStreamId();
 
-    // enable multi-out capability for this stream/allocation/connection
-    //matchAllocationIdToStreamId(request.allocation_id, stream_id);
-    matchAllocationIdToStreamId(request.allocation_id, stream_id, "dataFloat_out");
-    matchAllocationIdToStreamId(request.allocation_id, stream_id, "dataOctet_out");
-
     rtl_tuner.update_sri = true;
 
     return true;

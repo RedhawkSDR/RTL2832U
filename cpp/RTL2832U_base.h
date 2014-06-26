@@ -28,9 +28,7 @@ class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status
         void releaseObject() throw (CF::LifeCycle::ReleaseError, CORBA::SystemException);
 
         void loadProperties();
-        void matchAllocationIdToStreamId(const std::string allocation_id, const std::string stream_id, const std::string port_name="");
         void removeAllocationIdRouting(const size_t tuner_id);
-        void removeStreamIdRouting(const std::string stream_id, const std::string allocation_id="");
 
         virtual CF::Properties* getTunerStatus(const std::string& allocation_id);
         virtual void assignListener(const std::string& listen_alloc_id, const std::string& allocation_id);
@@ -38,8 +36,6 @@ class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status
         void frontendTunerStatusChanged(const std::vector<frontend_tuner_status_struct_struct>* oldValue, const std::vector<frontend_tuner_status_struct_struct>* newValue);
 
     protected:
-        void connectionTableChanged(const std::vector<connection_descriptor_struct>* oldValue, const std::vector<connection_descriptor_struct>* newValue);
-
         // Member variables exposed as properties
         bool update_available_devices;
         std::string group_id;
@@ -47,7 +43,6 @@ class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status
         short frequency_correction;
         target_device_struct target_device;
         current_device_struct current_device;
-        std::vector<connection_descriptor_struct> connectionTable;
         std::vector<rtl_device_struct_struct> available_devices;
 
         // Ports

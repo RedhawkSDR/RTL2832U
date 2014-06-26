@@ -63,8 +63,6 @@ void RTL2832U_base::construct()
     dataFloat_out = new bulkio::OutFloatPort("dataFloat_out");
     addPort("dataFloat_out", dataFloat_out);
 
-    this->addPropertyChangeListener("connectionTable", this, &RTL2832U_base::connectionTableChanged);
-
 }
 
 /*******************************************************************************************
@@ -95,12 +93,6 @@ void RTL2832U_base::releaseObject() throw (CORBA::SystemException, CF::LifeCycle
     }
 
     frontend::FrontendTunerDevice<frontend_tuner_status_struct_struct>::releaseObject();
-}
-
-void RTL2832U_base::connectionTableChanged(const std::vector<connection_descriptor_struct>* oldValue, const std::vector<connection_descriptor_struct>* newValue)
-{
-    dataOctet_out->updateConnectionFilter(*newValue);
-    dataFloat_out->updateConnectionFilter(*newValue);
 }
 
 void RTL2832U_base::loadProperties()
@@ -163,14 +155,6 @@ void RTL2832U_base::loadProperties()
                 "external",
                 "configure");
 
-    addProperty(connectionTable,
-                "connectionTable",
-                "",
-                "readonly",
-                "",
-                "external",
-                "configure");
-
     addProperty(available_devices,
                 "available_devices",
                 "available_devices",
@@ -214,34 +198,6 @@ CF::Properties* RTL2832U_base::getTunerStatus(const std::string& allocation_id)
 void RTL2832U_base::assignListener(const std::string& listen_alloc_id, const std::string& allocation_id)
 {
     listeners[listen_alloc_id] = allocation_id;
-    std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-    for (std::map<std::string, std::string>::iterator listener=listeners.begin();listener!=listeners.end();listener++) {
-        std::vector<std::string> streamids;
-        std::vector<std::string> port_names;
-        for (std::vector<connection_descriptor_struct>::iterator entry=this->connectionTable.begin();entry!=this->connectionTable.end();entry++) {
-            if (entry->connection_id == listener->second) {
-                streamids.push_back(entry->stream_id);
-                port_names.push_back(entry->port_name);
-            }
-        }
-        for (unsigned int i=0; i<streamids.size(); i++) {
-            bool foundEntry = false;
-            for (std::vector<connection_descriptor_struct>::iterator entry=this->connectionTable.begin();entry!=this->connectionTable.end();entry++) {
-                if ((entry->stream_id == streamids[i]) and (entry->connection_id == listen_alloc_id) and (entry->port_name == port_names[i])) {
-                    foundEntry = true;
-                    break;
-                }
-            }
-            if (!foundEntry) {
-                connection_descriptor_struct tmp;
-                tmp.stream_id = streamids[i];
-                tmp.connection_id = listen_alloc_id;
-                tmp.port_name = port_names[i];
-                this->connectionTable.push_back(tmp);
-            }
-        }
-    }
-    this->connectionTableChanged(&old_table, &this->connectionTable);
 }
 
 void RTL2832U_base::removeListener(const std::string& listen_alloc_id)
@@ -249,124 +205,7 @@ void RTL2832U_base::removeListener(const std::string& listen_alloc_id)
     if (listeners.find(listen_alloc_id) != listeners.end()) {
         listeners.erase(listen_alloc_id);
     }
-    std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-    std::vector<connection_descriptor_struct>::iterator entry = this->connectionTable.begin();
-    while (entry != this->connectionTable.end()) {
-        if (entry->connection_id == listen_alloc_id) {
-            entry = this->connectionTable.erase(entry);
-        } else {
-            entry++;
-        }
-    }
-    ExtendedCF::UsesConnectionSequence_var tmp;
-    // Check to see if port "dataOctet_out" is on connectionTable (old or new)
-    tmp = this->dataOctet_out->connections();
-    for (unsigned int i=0; i<this->dataOctet_out->connections()->length(); i++) {
-        std::string connection_id = ossie::corba::returnString(tmp[i].connectionId);
-        if (connection_id == listen_alloc_id) {
-            this->dataOctet_out->disconnectPort(connection_id.c_str());
-        }
-    }
-    // Check to see if port "dataFloat_out" is on connectionTable (old or new)
-    tmp = this->dataFloat_out->connections();
-    for (unsigned int i=0; i<this->dataFloat_out->connections()->length(); i++) {
-        std::string connection_id = ossie::corba::returnString(tmp[i].connectionId);
-        if (connection_id == listen_alloc_id) {
-            this->dataFloat_out->disconnectPort(connection_id.c_str());
-        }
-    }
-    this->connectionTableChanged(&old_table, &this->connectionTable);
 }
-
 void RTL2832U_base::removeAllocationIdRouting(const size_t tuner_id) {
-    std::string allocation_id = getControlAllocationId(tuner_id);
-    std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-    std::vector<connection_descriptor_struct>::iterator itr = this->connectionTable.begin();
-    while (itr != this->connectionTable.end()) {
-        if (itr->connection_id == allocation_id) {
-            itr = this->connectionTable.erase(itr);
-            continue;
-        }
-        itr++;
-    }
-    for (std::map<std::string, std::string>::iterator listener=listeners.begin();listener!=listeners.end();listener++) {
-        if (listener->second == allocation_id) {
-            std::vector<connection_descriptor_struct>::iterator itr = this->connectionTable.begin();
-            while (itr != this->connectionTable.end()) {
-                if (itr->connection_id == listener->first) {
-                    itr = this->connectionTable.erase(itr);
-                    continue;
-                }
-                itr++;
-            }
-        }
-    }
-    this->connectionTableChanged(&old_table, &this->connectionTable);
-}
-
-void RTL2832U_base::removeStreamIdRouting(const std::string stream_id, const std::string allocation_id) {
-    std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-    std::vector<connection_descriptor_struct>::iterator itr = this->connectionTable.begin();
-    while (itr != this->connectionTable.end()) {
-        if (allocation_id == "") {
-            if (itr->stream_id == stream_id) {
-                itr = this->connectionTable.erase(itr);
-                continue;
-            }
-        } else {
-            if ((itr->stream_id == stream_id) and (itr->connection_id == allocation_id)) {
-                itr = this->connectionTable.erase(itr);
-                continue;
-            }
-        }
-        itr++;
-    }
-    for (std::map<std::string, std::string>::iterator listener=listeners.begin();listener!=listeners.end();listener++) {
-        if (listener->second == allocation_id) {
-            std::vector<connection_descriptor_struct>::iterator itr = this->connectionTable.begin();
-            while (itr != this->connectionTable.end()) {
-                if ((itr->connection_id == listener->first) and (itr->stream_id == stream_id)) {
-                    itr = this->connectionTable.erase(itr);
-                    continue;
-                }
-                itr++;
-            }
-        }
-    }
-    this->connectionTableChanged(&old_table, &this->connectionTable);
-}
-
-void RTL2832U_base::matchAllocationIdToStreamId(const std::string allocation_id, const std::string stream_id, const std::string port_name) {
-    if (port_name != "") {
-        for (std::vector<connection_descriptor_struct>::iterator prop_itr = this->connectionTable.begin(); prop_itr!=this->connectionTable.end(); prop_itr++) {
-            if ((*prop_itr).port_name != port_name)
-                continue;
-            if ((*prop_itr).stream_id != stream_id)
-                continue;
-            if ((*prop_itr).connection_id != allocation_id)
-                continue;
-            // all three match. This is a repeat
-            return;
-        }
-        std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-        connection_descriptor_struct tmp;
-        tmp.connection_id = allocation_id;
-        tmp.port_name = port_name;
-        tmp.stream_id = stream_id;
-        this->connectionTable.push_back(tmp);
-        this->connectionTableChanged(&old_table, &this->connectionTable);
-        return;
-    }
-    std::vector<connection_descriptor_struct> old_table = this->connectionTable;
-    connection_descriptor_struct tmp;
-    tmp.connection_id = allocation_id;
-    tmp.port_name = "dataOctet_out";
-    tmp.stream_id = stream_id;
-    this->connectionTable.push_back(tmp);
-    tmp.connection_id = allocation_id;
-    tmp.port_name = "dataFloat_out";
-    tmp.stream_id = stream_id;
-    this->connectionTable.push_back(tmp);
-    this->connectionTableChanged(&old_table, &this->connectionTable);
 }
 
