@@ -63,4 +63,12 @@ class ResourceTests(ossie.utils.testing.ScaComponentTestCase):
     # for modules that will assist with testing resource with BULKIO ports
 
 if __name__ == "__main__":
-    ossie.utils.testing.main("../RTL2832U.spd.xml") # By default tests all implementations
+
+    spd_file = "../RTL2832U.spd.xml"
+    spd = ossie.utils.testing.SPDParser.parse(spd_file)
+    impl_ids = [impl.get_id() for impl in spd.get_implementation()]
+    #impl_ids = ['cpp']
+    #impl_ids = ['cpp_arm']
+    #impl_ids = ['cpp','cpp_arm']
+    for impl_id in impl_ids:
+        ossie.utils.testing.main(spd_file, impl=impl_id)
