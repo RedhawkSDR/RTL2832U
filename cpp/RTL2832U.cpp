@@ -1006,7 +1006,8 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         frontend_tuner_status[0].rf_flow_id = rfinfo_pkt.rf_flow_id;
         frontend_tuner_status[0].gain = rtl_device_ptr->getGain();
         frontend_tuner_status[0].group_id = group_id;
-        frontend_tuner_status[0].tuner_number = rtl_chan_num;
+        //frontend_tuner_status[0].tuner_number = rtl_chan_num;
+        frontend_tuner_status[0].tuner_number = 0;
         frontend_tuner_status[0].enabled = false;
         frontend_tuner_status[0].complex = true;
         frontend_tuner_status[0].stream_id.clear();
