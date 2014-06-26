@@ -946,8 +946,9 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
                         delete rtl_device_ptr;
                         rtl_device_ptr = NULL;
                     }
-                    // if we made it here, we're successful. break out to prevent incrementing rtl_chan_num
-                    break;
+                    // if rtl_device_ptr isn't NULL, break out to prevent incrementing rtl_chan_num
+                    if (rtl_device_ptr != NULL)
+                    	break;
                 }
             }
             if (rtl_device_ptr == NULL){
