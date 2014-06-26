@@ -362,7 +362,7 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
         try {
             if( !frontend::validateRequestVsDevice(request, rfinfo_pkt, complex, rtl_capabilities.center_frequency_min, rtl_capabilities.center_frequency_max,
                     rtl_capabilities.sample_rate_max /* bw=sr since data is complex */, rtl_capabilities.sample_rate_max) ){
-                throw FRONTEND::BadParameterException("INVALID REQUEST -- falls outside of analog input or device capabilities");
+                throw FRONTEND::BadParameterException("Invalid request -- falls outside of analog input or device capabilities");
             }
         } catch(FRONTEND::BadParameterException& e){
             LOG_INFO(RTL2832U_i,"deviceSetTuning|BadParameterException - " << e.msg);
