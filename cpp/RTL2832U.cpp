@@ -575,7 +575,6 @@ void RTL2832U_i::setTunerGain(const std::string& allocation_id, float gain)
 
         // update status from hw
         frontend_tuner_status[idx].gain = rtl_device_ptr->getGain();
-        rtl_tuner.update_sri = true;
 
     } catch (std::exception& e) {
         std::ostringstream msg;
@@ -843,7 +842,6 @@ std::string RTL2832U_i::getStreamId(){
         std::ostringstream id;
         id<<"tuner_freq_"<<long(frontend_tuner_status[0].center_frequency)<<"_Hz_"<<frontend::uuidGenerator();
         frontend_tuner_status[0].stream_id = id.str();
-        rtl_tuner.update_sri = true;
     }
     return frontend_tuner_status[0].stream_id;
 }
@@ -1079,9 +1077,6 @@ bool RTL2832U_i::rtlEnable(){
     // get stream id (creates one if not already created for this tuner)
     std::string stream_id = getStreamId();
     LOG_DEBUG(RTL2832U_i, "rtlEnable|started stream_id=" << stream_id);
-
-    // set flag to update sri before next pushPacket
-    rtl_tuner.update_sri = true;
 
     return true;
 }
