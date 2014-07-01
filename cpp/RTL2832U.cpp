@@ -57,6 +57,10 @@ RTL2832U_i::RTL2832U_i(char *devMgr_ior, char *id, char *lbl, char *sftwrPrfl, C
 
 RTL2832U_i::~RTL2832U_i()
 {
+    if (rtl_tuner.lock.cond != NULL)
+        delete rtl_tuner.lock.cond;
+    if (rtl_tuner.lock.mutex != NULL)
+        delete rtl_tuner.lock.mutex;
 }
 
 /***********************************************************************************************
@@ -195,26 +199,20 @@ RTL2832U_i::~RTL2832U_i()
         
         
 ************************************************************************************************/
+
+/* acquires the rtl_tuner.lock */
 int RTL2832U_i::serviceFunction()
 {
     //LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
-    if (rtl_device_ptr == NULL)
-        return NOOP;
-
-    if (frontend_tuner_status.size() <= 0)
+    if (rtl_device_ptr == NULL || frontend_tuner_status.size() <= 0)
         return NOOP;
 
     bool rx_data = false;
 
-    exclusive_lock tuner_lock(*rtl_tuner.lock);
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
-    //Check to make sure channel is allocated
-    if (getControlAllocationId(0).empty()){
-        return NOOP;
-    }
-
-    //Check to see if channel output is enabled
-    if (!frontend_tuner_status[0].enabled){
+    //Check to make sure channel is allocated and the output is enabled
+    if (getControlAllocationId(0).empty() || !frontend_tuner_status[0].enabled){
         return NOOP;
     }
 
@@ -226,12 +224,9 @@ int RTL2832U_i::serviceFunction()
         // Note: divide buffer_size by 2 because it takes two elements to represent a single complex sample
         LOG_DEBUG(RTL2832U_i,"serviceFunction|pushing buffer of " << rtl_tuner.buffer_size/2 << " samples");
 
-        // get stream id (creates one if not already created for this tuner)
-        std::string stream_id = getStreamId();
-
         // Send updated SRI
         if (rtl_tuner.update_sri){
-            BULKIO::StreamSRI sri = create(stream_id, frontend_tuner_status[0]);
+            BULKIO::StreamSRI sri = create(frontend_tuner_status[0].stream_id, frontend_tuner_status[0]);
             sri.mode = 1; // complex
             dataFloat_out->pushSRI(sri);
             dataOctet_out->pushSRI(sri);
@@ -244,8 +239,8 @@ int RTL2832U_i::serviceFunction()
             rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_size);
             rtl_tuner.octet_output_buffer.resize(rtl_tuner.buffer_size);
         }
-        dataFloat_out->pushPacket(rtl_tuner.float_output_buffer, rtl_tuner.output_buffer_time, false, stream_id);
-        dataOctet_out->pushPacket(rtl_tuner.octet_output_buffer, rtl_tuner.output_buffer_time, false, stream_id);
+        dataFloat_out->pushPacket(rtl_tuner.float_output_buffer, rtl_tuner.output_buffer_time, false, frontend_tuner_status[0].stream_id);
+        dataOctet_out->pushPacket(rtl_tuner.octet_output_buffer, rtl_tuner.output_buffer_time, false, frontend_tuner_status[0].stream_id);
         // restore buffer size if necessary
         if(rtl_tuner.buffer_size < rtl_tuner.buffer_capacity){
             rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_capacity);
@@ -262,13 +257,15 @@ int RTL2832U_i::serviceFunction()
     return NOOP;
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::initialize() throw (CF::LifeCycle::InitializeError, CORBA::SystemException)
 {
     RTL2832U_base::initialize();
 
-    // try to find an available RTL
     { // scope for prop_lock
         exclusive_lock lock(prop_lock);
+
+        // try to find an available RTL
         try{
             initRtl();
         } catch(CF::PropertySet::InvalidConfiguration& e) {
@@ -278,8 +275,9 @@ void RTL2832U_i::initialize() throw (CF::LifeCycle::InitializeError, CORBA::Syst
 
     /** As of the REDHAWK 1.8.3 release, device are not started automatically by the node. Therefore
      *  the device must start itself. */
-    start();
-
+    if(!started() && rtl_device_ptr != NULL){
+        start();
+    }
 }
 
 void RTL2832U_i::construct()
@@ -295,18 +293,13 @@ void RTL2832U_i::construct()
     digital_agc_enable = false;
 
     target_device.index = -1;
-    target_device.name.clear();
-    target_device.product.clear();
-    target_device.serial.clear();
-    target_device.vendor.clear();
 
-    // initialize rf info packets w/ very large ranges
+    // initialize rf info packet w/ very large range
     rfinfo_pkt.rf_flow_id = "RTL_FLOW_ID_NOT_SET";
     rfinfo_pkt.rf_center_freq = 50e9; // 50 GHz
     rfinfo_pkt.rf_bandwidth = 100e9; // 100 GHz, makes range 0 Hz to 100 GHz
     rfinfo_pkt.if_center_freq = 0; // 0 Hz, no up/down converter
 
-    //USRP_UHD_base::construct();
     /***********************************************************************************
      this function is invoked in the constructor
     ***********************************************************************************/
@@ -316,16 +309,13 @@ void RTL2832U_i::construct()
     addPropertyChangeListener("digital_agc_enable", this, &RTL2832U_i::rtl2832uAgcEnableChanged);
     addPropertyChangeListener("update_available_devices", this, &RTL2832U_i::updateAvailableDevicesChanged);
     addPropertyChangeListener("frequency_correction", this, &RTL2832U_i::frequencyCorrectionChanged);
-
-    if(update_available_devices){
-        update_available_devices = false;
-        updateAvailableDevices();
-    }
 }
 
 /*************************************************************
 Functions supporting tuning allocation
 *************************************************************/
+
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::deviceEnable(frontend_tuner_status_struct_struct &fts, size_t tuner_id){
     /************************************************************
     modify fts, which corresponds to this->frontend_tuner_status[tuner_id]
@@ -333,8 +323,11 @@ void RTL2832U_i::deviceEnable(frontend_tuner_status_struct_struct &fts, size_t t
     ************************************************************/
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " tuner_id=" << tuner_id);
     // Start Streaming Now
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
     rtlEnable(); // modifies fts.enabled appropriately
 }
+
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::deviceDisable(frontend_tuner_status_struct_struct &fts, size_t tuner_id){
     /************************************************************
     modify fts, which corresponds to this->frontend_tuner_status[tuner_id]
@@ -342,8 +335,11 @@ void RTL2832U_i::deviceDisable(frontend_tuner_status_struct_struct &fts, size_t 
     ************************************************************/
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " tuner_id=" << tuner_id);
     // Stop Streaming Now
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
     rtlDisable(); //modifies fts.enabled appropriately
 }
+
+/* acquires the prop_lock and the rtl_tuner.lock */
 bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struct &request, frontend_tuner_status_struct_struct &fts, size_t tuner_id){
     /************************************************************
     modify fts, which corresponds to this->frontend_tuner_status[tuner_id]
@@ -385,9 +381,9 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
 
     LOG_DEBUG(RTL2832U_i, std::fixed << "request: freq="<<request.center_frequency<<"  bw="<<request.bandwidth<<"  sr="<<request.sample_rate<<"  bw_sr="<<bw_sr);
 
-    exclusive_lock tuner_lock(*rtl_tuner.lock);
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
-    // configure hw
+    // configure hw -- allocations and tuner status are reported in RF, but we interface with the device in IF
     rtl_device_ptr->setFreq(request.center_frequency-if_offset);
     rtl_device_ptr->setRate(bw_sr);
 
@@ -399,13 +395,12 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
 
     LOG_DEBUG(RTL2832U_i, std::fixed << "result: freq="<<fts.center_frequency<<"  bw="<<fts.bandwidth<<"  sr="<<fts.sample_rate);
 
-    // creates a stream id if not already created for this tuner
-    std::string stream_id = getStreamId();
-
     rtl_tuner.update_sri = true;
 
     return true;
 }
+
+/* acquires the rtl_tuner.lock */
 bool RTL2832U_i::deviceDeleteTuning(frontend_tuner_status_struct_struct &fts, size_t tuner_id) {
     /************************************************************
     modify fts, which corresponds to this->frontend_tuner_status[tuner_id]
@@ -413,26 +408,28 @@ bool RTL2832U_i::deviceDeleteTuning(frontend_tuner_status_struct_struct &fts, si
     ************************************************************/
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " tuner_id=" << tuner_id);
 
-    exclusive_lock tuner_lock(*rtl_tuner.lock);
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
-    std::string stream_id = getStreamId();
-    if(rtl_tuner.update_sri){
-        BULKIO::StreamSRI sri = create(stream_id, frontend_tuner_status[0]);
-        sri.mode = 1; // complex
-        //printSRI(&sri); // DEBUG
-        dataFloat_out->pushSRI(sri);
-        dataOctet_out->pushSRI(sri);
-        rtl_tuner.update_sri = false;
+    // no need to send SRI or push EOS if tuner was never enabled (no stream_id)
+    if(!frontend_tuner_status[0].stream_id.empty()){
+        if(rtl_tuner.update_sri){
+            BULKIO::StreamSRI sri = create(frontend_tuner_status[0].stream_id, frontend_tuner_status[0]);
+            sri.mode = 1; // complex
+            //printSRI(&sri); // DEBUG
+            dataFloat_out->pushSRI(sri);
+            dataOctet_out->pushSRI(sri);
+            rtl_tuner.update_sri = false;
+        }
+
+        rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_size);
+        rtl_tuner.octet_output_buffer.resize(rtl_tuner.buffer_size);
+        LOG_DEBUG(RTL2832U_i,"deviceDeleteTuning|pushing EOS with remaining samples. buffer_size=" << rtl_tuner.buffer_size );
+        dataFloat_out->pushPacket(rtl_tuner.float_output_buffer, rtl_tuner.output_buffer_time, true, frontend_tuner_status[0].stream_id);
+        dataOctet_out->pushPacket(rtl_tuner.octet_output_buffer, rtl_tuner.output_buffer_time, true, frontend_tuner_status[0].stream_id);
+        rtl_tuner.buffer_size = 0;
+        rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_capacity);
+        rtl_tuner.octet_output_buffer.resize(rtl_tuner.buffer_capacity);
     }
-
-    rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_size);
-    rtl_tuner.octet_output_buffer.resize(rtl_tuner.buffer_size);
-    LOG_DEBUG(RTL2832U_i,"deviceDeleteTuning|pushing EOS with remaining samples. buffer_size=" << rtl_tuner.buffer_size );
-    dataFloat_out->pushPacket(rtl_tuner.float_output_buffer, rtl_tuner.output_buffer_time, true, stream_id);
-    dataOctet_out->pushPacket(rtl_tuner.octet_output_buffer, rtl_tuner.output_buffer_time, true, stream_id);
-    rtl_tuner.buffer_size = 0;
-    rtl_tuner.float_output_buffer.resize(rtl_tuner.buffer_capacity);
-    rtl_tuner.octet_output_buffer.resize(rtl_tuner.buffer_capacity);
 
     rtl_tuner.reset();
     fts.center_frequency = 0.0;
@@ -446,6 +443,7 @@ bool RTL2832U_i::deviceDeleteTuning(frontend_tuner_status_struct_struct &fts, si
 /*************************************************************
 Functions servicing the tuner control port
 *************************************************************/
+
 std::string RTL2832U_i::getTunerType(const std::string& allocation_id) {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
@@ -472,6 +470,7 @@ std::string RTL2832U_i::getTunerRfFlowId(const std::string& allocation_id) {
     return frontend_tuner_status[idx].rf_flow_id;
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::setTunerCenterFrequency(const std::string& allocation_id, double freq) {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
@@ -479,14 +478,21 @@ void RTL2832U_i::setTunerCenterFrequency(const std::string& allocation_id, doubl
         throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
     // set hardware to new value. Raise an exception if it's not possible
     try {
-        if (frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_min)<0 ||
-                frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_max)>0){
-            std::ostringstream msg;
-            msg << "setTunerCenterFrequency|Invalid center frequency (" << freq <<"). Center frequency must be between "
-                << rtl_capabilities.center_frequency_min << " and " << rtl_capabilities.center_frequency_max << " Hz";
-            LOG_WARN(RTL2832U_i,msg.str() );
-            throw FRONTEND::BadParameterException(msg.str().c_str());
+
+        { // scope for prop_lock
+            exclusive_lock lock(prop_lock);
+
+            if (frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_min)<0 ||
+                    frontend::floatingPointCompare(freq,rtl_capabilities.center_frequency_max)>0){
+                std::ostringstream msg;
+                msg << "setTunerCenterFrequency|Invalid center frequency (" << freq <<"). Center frequency must be between "
+                    << rtl_capabilities.center_frequency_min << " and " << rtl_capabilities.center_frequency_max << " Hz";
+                LOG_WARN(RTL2832U_i,msg.str() );
+                throw FRONTEND::BadParameterException(msg.str().c_str());
+            }
         }
+
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
         // set hw with new value
         rtl_device_ptr->setFreq(freq);
@@ -523,12 +529,16 @@ double RTL2832U_i::getTunerBandwidth(const std::string& allocation_id) {
     return frontend_tuner_status[idx].bandwidth;
 }
 
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::setTunerAgcEnable(const std::string& allocation_id, bool enable)
 {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
     if(allocation_id != getControlAllocationId(idx))
         throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
+
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
+
     rtl_device_ptr->setGainMode(enable);
     frontend_tuner_status[idx].agc = enable;
     frontend_tuner_status[idx].gain = rtl_device_ptr->getGain();
@@ -541,6 +551,7 @@ bool RTL2832U_i::getTunerAgcEnable(const std::string& allocation_id)
     return frontend_tuner_status[idx].agc;
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::setTunerGain(const std::string& allocation_id, float gain)
 {
     long idx = getTunerMapping(allocation_id);
@@ -555,19 +566,31 @@ void RTL2832U_i::setTunerGain(const std::string& allocation_id, float gain)
             throw FRONTEND::FrontendException("Gain mode set to auto; must set mode to manual before manually setting gain.");
         }
 
-        // Instead of throwing a BadParameterException here, we'll get as close as possible
-        if (frontend::floatingPointCompare(gain,rtl_capabilities.gain_min)<0){
-            std::ostringstream msg;
-            msg << "setTunerGain|Invalid request (" << gain <<" dB), setting to minimum gain. Gain must be set between " << rtl_capabilities.gain_min << " and " << rtl_capabilities.gain_max << " dB";
-            LOG_WARN(RTL2832U_i,msg.str() );
-            //throw FRONTEND::BadParameterException(msg.str().c_str());
-            gain = rtl_capabilities.gain_min;
-        } else if (frontend::floatingPointCompare(gain,rtl_capabilities.gain_max)>0){
-            std::ostringstream msg;
-            msg << "setTunerGain|Invalid request (" << gain <<" dB), setting to maximum gain. Gain must be set between " << rtl_capabilities.gain_min << " and " << rtl_capabilities.gain_max << " dB";
-            LOG_WARN(RTL2832U_i,msg.str() );
-            //throw FRONTEND::BadParameterException(msg.str().c_str());
-            gain = rtl_capabilities.gain_max;
+        { // scope for prop_lock
+            exclusive_lock lock(prop_lock);
+
+            // Instead of throwing a BadParameterException here, we'll get as close as possible
+            if (frontend::floatingPointCompare(gain,rtl_capabilities.gain_min)<0){
+                std::ostringstream msg;
+                msg << "setTunerGain|Invalid request (" << gain <<" dB), setting to minimum gain. Gain must be set between " << rtl_capabilities.gain_min << " and " << rtl_capabilities.gain_max << " dB";
+                LOG_WARN(RTL2832U_i,msg.str() );
+                //throw FRONTEND::BadParameterException(msg.str().c_str());
+                gain = rtl_capabilities.gain_min;
+            } else if (frontend::floatingPointCompare(gain,rtl_capabilities.gain_max)>0){
+                std::ostringstream msg;
+                msg << "setTunerGain|Invalid request (" << gain <<" dB), setting to maximum gain. Gain must be set between " << rtl_capabilities.gain_min << " and " << rtl_capabilities.gain_max << " dB";
+                LOG_WARN(RTL2832U_i,msg.str() );
+                //throw FRONTEND::BadParameterException(msg.str().c_str());
+                gain = rtl_capabilities.gain_max;
+            }
+        }
+
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
+
+        // check if tuner AGC is enabled before adjusting manually
+        // (do this again now that we have tuner_lock, it could have changed since last check)
+        if(frontend_tuner_status[idx].agc){
+            throw FRONTEND::FrontendException("Gain mode set to auto; must set mode to manual before manually setting gain.");
         }
 
         // set hw with new value
@@ -603,12 +626,16 @@ long RTL2832U_i::getTunerReferenceSource(const std::string& allocation_id)
     throw FRONTEND::NotSupportedException("getTunerReferenceSource not supported");
 }
 
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::setTunerEnable(const std::string& allocation_id, bool enable) {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
     if(allocation_id != getControlAllocationId(idx))
         throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
     // set hardware to new value. Raise an exception if it's not possible
+
+    scoped_tuner_lock tuner_lock(rtl_tuner.lock);
+
     if(enable)
         rtlEnable();
     else
@@ -621,6 +648,7 @@ bool RTL2832U_i::getTunerEnable(const std::string& allocation_id) {
     return frontend_tuner_status[idx].enabled;
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::setTunerOutputSampleRate(const std::string& allocation_id, double sr) {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
@@ -629,14 +657,20 @@ void RTL2832U_i::setTunerOutputSampleRate(const std::string& allocation_id, doub
     // set hardware to new value. Raise an exception if it's not possible
     try {
 
-        if (frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_min)<0 ||
-                frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_max)>0){
-            std::ostringstream msg;
-            msg << "setTunerOutputSampleRate|Invalid sample rate (" << sr <<"). Sample rate must be between "
-                << rtl_capabilities.sample_rate_min << " and " << rtl_capabilities.sample_rate_max << " sps.";
-            LOG_WARN(RTL2832U_i,msg.str() );
-            throw FRONTEND::BadParameterException(msg.str().c_str());
+        { // scope for prop_lock
+            exclusive_lock lock(prop_lock);
+
+            if (frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_min)<0 ||
+                    frontend::floatingPointCompare(sr,rtl_capabilities.sample_rate_max)>0){
+                std::ostringstream msg;
+                msg << "setTunerOutputSampleRate|Invalid sample rate (" << sr <<"). Sample rate must be between "
+                    << rtl_capabilities.sample_rate_min << " and " << rtl_capabilities.sample_rate_max << " sps.";
+                LOG_WARN(RTL2832U_i,msg.str() );
+                throw FRONTEND::BadParameterException(msg.str().c_str());
+            }
         }
+
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
         // set hw with new value
         rtl_device_ptr->setRate(sr);
@@ -667,6 +701,8 @@ double RTL2832U_i::getTunerOutputSampleRate(const std::string& allocation_id){
 Functions servicing the RFInfo port(s)
 - port_name is the port over which the call was received
 *************************************************************/
+
+/* acquires the prop_lock */
 std::string RTL2832U_i::get_rf_flow_id(const std::string& port_name)
 {
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " port_name=" << port_name);
@@ -680,6 +716,7 @@ std::string RTL2832U_i::get_rf_flow_id(const std::string& port_name)
     }
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::set_rf_flow_id(const std::string& port_name, const std::string& id)
 {
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " port_name=" << port_name << " id=" << id);
@@ -687,6 +724,7 @@ void RTL2832U_i::set_rf_flow_id(const std::string& port_name, const std::string&
     if( port_name == "RFInfo_in"){
         exclusive_lock lock(prop_lock);
         rfinfo_pkt.rf_flow_id = id;
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
         frontend_tuner_status[0].rf_flow_id = id;
         rtl_tuner.update_sri = true;
     } else {
@@ -694,6 +732,7 @@ void RTL2832U_i::set_rf_flow_id(const std::string& port_name, const std::string&
     }
 }
 
+/* acquires the prop_lock */
 frontend::RFInfoPkt RTL2832U_i::get_rfinfo_pkt(const std::string& port_name)
 {
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__ << " port_name=" << port_name);
@@ -727,6 +766,7 @@ frontend::RFInfoPkt RTL2832U_i::get_rfinfo_pkt(const std::string& port_name)
     return pkt;
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::set_rfinfo_pkt(const std::string& port_name, const frontend::RFInfoPkt &pkt)
 {
     LOG_DEBUG(RTL2832U_i, "set_rfinfo_pkt|port_name=" << port_name << " pkt.rf_flow_id=" << pkt.rf_flow_id);
@@ -756,6 +796,7 @@ void RTL2832U_i::set_rfinfo_pkt(const std::string& port_name, const frontend::RF
         for (unsigned int i=0; i<pkt.sensor.feed.freq_range.values.size(); i++) {
             rfinfo_pkt.sensor.feed.freq_range.values[i] = pkt.sensor.feed.freq_range.values[i];
         }
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
         frontend_tuner_status[0].rf_flow_id = pkt.rf_flow_id;
         rtl_tuner.update_sri = true;
     } else {
@@ -770,37 +811,44 @@ void RTL2832U_i::set_rfinfo_pkt(const std::string& port_name, const frontend::RF
 /*************************************************************
 Configure callbacks
 *************************************************************/
+
+/* acquires the prop_lock */
 void RTL2832U_i::updateAvailableDevicesChanged(const bool* old_value, const bool* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
     exclusive_lock lock(prop_lock);
 
-    if (update_available_devices){
+    if (*new_value){
         updateAvailableDevices();
+        update_available_devices = false;
     }
-    update_available_devices = false;
 }
+
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::groupIdChanged(const std::string* old_value, const std::string* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     exclusive_lock lock(prop_lock);
     if(frontend_tuner_status.size() > 0){
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
         frontend_tuner_status[0].group_id = *new_value;
     }
 }
+
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::rtl2832uAgcEnableChanged(const bool* old_value, const bool* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
-    exclusive_lock lock(prop_lock);
     if(rtl_device_ptr != NULL)
-        rtl_device_ptr->setAgcMode(digital_agc_enable);
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
+        rtl_device_ptr->setAgcMode(*new_value);
 }
+
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, const target_device_struct* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
     if(started()){
-        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|device has been started, must stop before initialization");
+        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|stopping device before initialization");
         stop();
-    } else {
-        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|device has not been started, continue with initialization");
     }
 
     { // scope for prop_lock
@@ -813,22 +861,24 @@ void RTL2832U_i::targetDeviceChanged(const target_device_struct* old_value, cons
             sleep(1);
             initRtl();
         }
-    } // end scope for prop_lock
+    }
 
-    if(!started()){
-        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|device is not started, must start device after initialization");
+    if(!started() && rtl_device_ptr != NULL){
+        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|starting device after initialization");
         start();
-    } else {
-        LOG_DEBUG(RTL2832U_i, "targetDeviceChanged|device was already started after initialization, not calling start again");
     }
 }
 
+/* acquires the prop_lock and the rtl_tuner.lock */
 void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short* new_value){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     exclusive_lock lock(prop_lock);
     if(rtl_device_ptr != NULL){
-        rtl_device_ptr->setFreqCorrection(frequency_correction);
-        frequency_correction = rtl_device_ptr->getFreqCorrection();
+        {
+            scoped_tuner_lock tuner_lock(rtl_tuner.lock);
+            rtl_device_ptr->setFreqCorrection(frequency_correction);
+            frequency_correction = rtl_device_ptr->getFreqCorrection();
+        }
     } else {
         frequency_correction = *old_value;
     }
@@ -837,20 +887,19 @@ void RTL2832U_i::frequencyCorrectionChanged(const short* old_value, const short*
 /*************************************************************
 Helper functions
 *************************************************************/
-std::string RTL2832U_i::getStreamId(){
-    if (frontend_tuner_status[0].stream_id.empty()){
-        std::ostringstream id;
-        id<<"tuner_freq_"<<long(frontend_tuner_status[0].center_frequency)<<"_Hz_"<<frontend::uuidGenerator();
-        frontend_tuner_status[0].stream_id = id.str();
-    }
-    return frontend_tuner_status[0].stream_id;
+
+/* acquire rtl_tuner.lock prior to calling this function */
+std::string RTL2832U_i::generateStreamId(){
+    std::ostringstream id;
+    id<<"tuner_freq_"<<long(frontend_tuner_status[0].center_frequency)<<"_Hz_"<<frontend::uuidGenerator();
+    return id.str();
 }
 
 /*************************************************************
 Functions that interface with RTL device/driver
 *************************************************************/
 
-/* call acquire prop_lock prior to calling this function */
+/* acquire prop_lock prior to calling this function */
 void RTL2832U_i::updateAvailableDevices(){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     available_devices.clear();
@@ -876,7 +925,8 @@ void RTL2832U_i::updateAvailableDevices(){
     }
 }
 
-/* call acquire prop_lock prior to calling this function */
+/* acquire prop_lock prior to calling this function */
+/* acquires the rtl_tuner.lock */
 void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
     try {
@@ -941,7 +991,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
                     }
                     // if rtl_device_ptr isn't NULL, break out to prevent incrementing rtl_chan_num
                     if (rtl_device_ptr != NULL)
-                    	break;
+                        break;
                 }
             }
             if (rtl_device_ptr == NULL){
@@ -956,6 +1006,14 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         current_device.product = available_devices[rtl_chan_num].product;
         current_device.vendor = available_devices[rtl_chan_num].vendor;
         current_device.serial = available_devices[rtl_chan_num].serial;
+
+        // size tracking structures and set up tuner lock
+        setNumChannels(1);
+        if (rtl_tuner.lock.cond == NULL)
+            rtl_tuner.lock.cond = new boost::condition_variable;
+        if (rtl_tuner.lock.mutex == NULL)
+            rtl_tuner.lock.mutex = new boost::mutex;
+        scoped_tuner_lock tuner_lock(rtl_tuner.lock);
 
         // read RTL device capabilities
         rtl_capabilities.center_frequency_max = rtl_device_ptr->getFreqRange().stop();
@@ -981,13 +1039,6 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
 
         // Initialize status vector
         // this device only has a single tuner
-        setNumChannels(1);
-
-        //Initialize Data Members
-        char tmp[128];
-        if(rtl_tuner.lock == NULL)
-            rtl_tuner.lock = new boost::mutex;
-        rtl_tuner.reset();
 
         frontend_tuner_status[0].agc = true; // this is the tuner gain mode, not RTL2832U AGC mode
         frontend_tuner_status[0].allocation_id_csv = "";
@@ -1005,6 +1056,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
         frontend_tuner_status[0].complex = true;
         frontend_tuner_status[0].stream_id.clear();
 
+        char tmp[128];
         sprintf(tmp,"%.2f-%.2f",rtl_capabilities.center_frequency_min,rtl_capabilities.center_frequency_max);
         frontend_tuner_status[0].available_frequency = std::string(tmp);
         sprintf(tmp,"%.2f-%.2f",rtl_capabilities.gain_min,rtl_capabilities.gain_max);
@@ -1018,7 +1070,7 @@ void RTL2832U_i::initRtl() throw (CF::PropertySet::InvalidConfiguration) {
     }
 }
 
-/* acquire tuner's lock prior to calling this function */
+/* acquire rtl_tuner.lock prior to calling this function */
 long RTL2832U_i::rtlReceive(double timeout){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
@@ -1058,15 +1110,12 @@ long RTL2832U_i::rtlReceive(double timeout){
     return num_samps;
 }
 
+/* acquire rtl_tuner.lock prior to calling this function */
 bool RTL2832U_i::rtlEnable(){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
-    {
-        exclusive_lock tuner_lock(*rtl_tuner.lock);
-
-        // clear buffers
-        rtl_tuner.buffer_size = 0;
-    }
+    // clear buffers
+    rtl_tuner.buffer_size = 0;
 
     // enable hardware
     rtl_device_ptr->issueStreamCmd(RtlDevice::STREAM_MODE_START_CONTINUOUS);
@@ -1074,13 +1123,16 @@ bool RTL2832U_i::rtlEnable(){
     // update status structure
     frontend_tuner_status[0].enabled = true;
 
-    // get stream id (creates one if not already created for this tuner)
-    std::string stream_id = getStreamId();
-    LOG_DEBUG(RTL2832U_i, "rtlEnable|started stream_id=" << stream_id);
+    // generate stream id if not done already
+    if(frontend_tuner_status[0].stream_id.empty()){
+        frontend_tuner_status[0].stream_id = generateStreamId();
+        LOG_DEBUG(RTL2832U_i, "rtlEnable|started stream_id=" << frontend_tuner_status[0].stream_id);
+    }
 
     return true;
 }
 
+/* acquire rtl_tuner.lock prior to calling this function */
 bool RTL2832U_i::rtlDisable(){
     LOG_TRACE(RTL2832U_i,__PRETTY_FUNCTION__);
 
