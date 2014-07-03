@@ -197,7 +197,13 @@ CF::Properties* RTL2832U_base::getTunerStatus(const std::string& allocation_id)
 
 void RTL2832U_base::assignListener(const std::string& listen_alloc_id, const std::string& allocation_id)
 {
-    listeners[listen_alloc_id] = allocation_id;
+    // find control allocation_id
+    std::string existing_alloc_id = allocation_id;
+    std::map<std::string,std::string>::iterator existing_listener;
+    while ((existing_listener=listeners.find(existing_alloc_id)) != listeners.end())
+        existing_alloc_id = existing_listener->second;
+    listeners[listen_alloc_id] = existing_alloc_id;
+
 }
 
 void RTL2832U_base::removeListener(const std::string& listen_alloc_id)
