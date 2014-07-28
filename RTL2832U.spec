@@ -32,7 +32,7 @@ Prefix:         %{_prefix}
 
 Name:           RTL2832U
 Version:        1.0.0
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Device %{name}
 
 Group:          REDHAWK/Devices
