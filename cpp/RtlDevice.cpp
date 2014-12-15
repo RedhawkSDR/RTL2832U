@@ -416,11 +416,27 @@ void RtlDevice::setFreq(double freq)
             freq = m_frequencyRange.stop();
         }
 
-        if ((r = rtlsdr_set_center_freq(m_device, (uint32_t) freq)) < 0) {
-            LOG_WARN(RtlDevice, "Unable to set frequency to " << freq << " Hz with error " << r);
-        } else {
-            LOG_INFO(RtlDevice, "Center frequency set to " << freq << " Hz");
+        bool done = false;
+        unsigned int attempt=0;
+        while (not done) {
+            if ((r = rtlsdr_set_center_freq(m_device, (uint32_t) freq)) < 0) {
+                // This fails occasionally when RTL is being controlled from within a virtual machine.
+                // Experimentation shows that this will typically succeed on the second attempt.
+                attempt++;
+                if (attempt < 50){ // keep trying for up to 5 seconds
+                    LOG_INFO(RtlDevice, "Error setting frequency, trying again...");
+                    usleep(100000); // sleep 100 ms
+                } else {
+                    LOG_WARN(RtlDevice, "Unable to set frequency to " << freq << " Hz with error " << r);
+                    done = true;
+                }
+            } else {
+                done = true;
+                LOG_INFO(RtlDevice, "Center frequency set to " << freq << " Hz");
+            }
         }
+    } else {
+        LOG_WARN(RtlDevice, "Unable to set frequency: Could not open RTL device "<<m_channelNumber);
     }
 }
 
@@ -435,10 +451,23 @@ double RtlDevice::getFreq()
     if (m_device) {
         uint32_t freq;
 
-        if ((freq = rtlsdr_get_center_freq(m_device))) {
-            return (double) freq;
-        } else {
-            LOG_WARN(RtlDevice, "Unable to get tuner frequency with error " << freq);
+        bool done = false;
+        unsigned int attempt = 0;
+        while (not done) {
+            if ((freq = rtlsdr_get_center_freq(m_device))) {
+                return (double) freq;
+            } else {
+                // This fails occasionally when RTL is being controlled from within a virtual machine.
+                // Experimentation shows that this will typically succeed on the second attempt.
+                attempt++;
+                if (attempt < 50){ // keep trying for up to 5 seconds
+                    LOG_INFO(RtlDevice, "Error getting frequency, trying again...");
+                    usleep(100000); // sleep 100 ms
+                } else {
+                    LOG_WARN(RtlDevice, "Unable to get tuner frequency with error " << freq);
+                    done = true;
+                }
+            }
         }
     } else {
         LOG_WARN(RtlDevice, "Unable to get frequency: Could not open RTL device "<<m_channelNumber);
@@ -536,8 +565,16 @@ void RtlDevice::setFreqCorrection(int ppm){
     if (m_device) {
         uint32_t r;
         if((r = rtlsdr_set_freq_correction(m_device,ppm)) != 0){
-            LOG_WARN(RtlDevice, "Unable to set frequency correction value");
+            if(ppm != rtlsdr_get_freq_correction(m_device)){
+                LOG_WARN(RtlDevice, "Unable to set frequency correction value");
+            } else {
+                LOG_INFO(RtlDevice, "Set frequency correction value to "<<ppm);
+            }
+        } else {
+            LOG_INFO(RtlDevice, "Set frequency correction value to "<<ppm);
         }
+    } else {
+        LOG_WARN(RtlDevice, "Unable to set frequency correction: Could not open RTL device "<<m_channelNumber);
     }
 }
 
@@ -549,6 +586,8 @@ int RtlDevice::getFreqCorrection(){
     LOG_TRACE(RtlDevice, __PRETTY_FUNCTION__);
     if (m_device) {
         return rtlsdr_get_freq_correction(m_device);
+    } else {
+        LOG_WARN(RtlDevice, "Unable to get frequency correction: Could not open RTL device "<<m_channelNumber);
     }
     return 0;
 }
