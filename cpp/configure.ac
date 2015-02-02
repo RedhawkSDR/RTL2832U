@@ -43,6 +43,20 @@ AX_BOOST_SYSTEM
 AX_BOOST_THREAD
 AX_BOOST_REGEX
 
+case $host_cpu in
+  *arm*)
+             CPU_SPECIFIC_FLAGS='-mfpu=neon -ftree-vectorize -ffast-math -funsafe-math-optimizations -funsafe-loop-optimizations -ftree-loop-if-convert-stores -mfloat-abi=hard -ftree-vectorizer-verbose=1'
+             BINDIR_SUFFIX='_arm'
+             ;;
+  *x86*)
+             CPU_SPECIFIC_FLAGS=''
+             BINDIR_SUFFIX=''
+             ;;
+esac
+
+AC_SUBST([CPU_SPECIFIC_FLAGS])
+AC_SUBST([BINDIR_SUFFIX])
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
