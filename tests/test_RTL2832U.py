@@ -86,8 +86,6 @@ if __name__ == "__main__":
     spd_file = "../RTL2832U.spd.xml"
     spd = ossie.utils.testing.SPDParser.parse(spd_file)
     impl_ids = [impl.get_id() for impl in spd.get_implementation()]
-    #impl_ids = ['cpp']
-    #impl_ids = ['cpp_arm']
-    #impl_ids = ['cpp','cpp_arm']
+    impl_ids.remove('cpp_arm') # The cpp_arm impl still exists in the SPD, but is no longer a directory
     for impl_id in impl_ids:
         ossie.utils.testing.main(spd_file, impl=impl_id)

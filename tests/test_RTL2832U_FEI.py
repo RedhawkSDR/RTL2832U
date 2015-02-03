@@ -45,7 +45,6 @@ DUT='RTL|R820T'
 #DUT='RTL|FC2580'
 
 IMPL_ID='cpp'
-#IMPL_ID='cpp_arm'
 
 if 'RTL' in DUT:
     dut_name = 'RTL2832U'
