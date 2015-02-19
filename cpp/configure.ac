@@ -29,6 +29,12 @@ AC_CORBA_ORB
 OSSIE_CHECK_OSSIE
 OSSIE_SDRROOT_AS_PREFIX
 
+AC_ARG_WITH(domainname,
+	AS_HELP_STRING([--with-domainname=[domain name]], [Provide a domain name to the generated node, defaults to REDHAWK_DEV]),
+	rtl2832u_node_domain=$withval,
+	rtl2832u_node_domain=REDHAWK_DEV)
+AC_SUBST(DOMAINNAME, $rtl2832u_node_domain)
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 # Dependencies

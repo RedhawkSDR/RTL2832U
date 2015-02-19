@@ -24,7 +24,8 @@ bin_PROGRAMS = RTL2832U
 
 xmldir = $(prefix)/dev/devices/RTL2832U/
 dist_xml_DATA = ../RTL2832U.scd.xml ../RTL2832U.prf.xml ../RTL2832U.spd.xml
-
+confdir = $(prefix)/dev/devices/RTL2832U/
+dist_conf_SCRIPTS = ../nodeconfig.py
 
 distclean-local:
 	rm -f config.*
@@ -51,3 +52,5 @@ RTL2832U_CXXFLAGS = -Wall $(PROJECTDEPS_CFLAGS) $(BOOST_CPPFLAGS) $(INTERFACEDEP
 
 RTL2832U_LDFLAGS = -Wall $(redhawk_LDFLAGS_auto)
 
+create-rtl2832u-node: install-am
+	../nodeconfig.py --inplace --clean --domainname=$(DOMAINNAME)
