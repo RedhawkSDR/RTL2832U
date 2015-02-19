@@ -86,6 +86,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,redhawk,redhawk,-)
 %dir %{_prefix}/dev/devices/%{name}
+%{_prefix}/dev/devices/%{name}/nodeconfig.py
 %{_prefix}/dev/devices/%{name}/RTL2832U.scd.xml
 %{_prefix}/dev/devices/%{name}/RTL2832U.prf.xml
 %{_prefix}/dev/devices/%{name}/RTL2832U.spd.xml
