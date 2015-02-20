@@ -3,14 +3,14 @@
 # This file is protected by Copyright. Please refer to the COPYRIGHT file 
 # distributed with this source distribution.
 # 
-# This file is part of REDHAWK core.
+# This file is part of RTL2832U Device.
 # 
-# REDHAWK core is free software: you can redistribute it and/or modify it under 
+# RTL2832U Device is free software: you can redistribute it and/or modify it under 
 # the terms of the GNU Lesser General Public License as published by the Free 
 # Software Foundation, either version 3 of the License, or (at your option) any 
 # later version.
 # 
-# REDHAWK core is distributed in the hope that it will be useful, but WITHOUT 
+# RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT 
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
 # FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
 # details.
@@ -88,14 +88,14 @@ class NodeConfig(object):
         return float(ver[0:1]) + float(ver[2:3])*0.1 + float(ver[4:5])*0.000001
 
     def _gather_rtl_information(self):
-      if not self.options.silent:
-        self._log.debug("Checking rtl capacity...")
+        if not self.options.silent:
+            self._log.debug("Checking rtl capacity...")
 
-      self.props["name"] = self.options.name
-      self.props["product"] = self.options.product
-      self.props["serial"] = self.options.serial
-      self.props["vendor"] = self.options.vendor
-      self.props["index"] = self.options.index
+        self.props["name"] = self.options.name
+        self.props["product"] = self.options.product
+        self.props["serial"] = self.options.serial
+        self.props["vendor"] = self.options.vendor
+        self.props["index"] = self.options.index
 
     def _createDeviceManagerProfile(self):
         #####################
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     parser.add_option("--nodename", dest="nodename", default="DevMgr_RTL2832U_%s" % socket.gethostname(),
                       help="Desired nodename, if none is given DevMgr_RTL2832U_${HOST} is used")
     parser.add_option("--inplace", dest="inplace", default=False, action="store_true",
-                      help="update the RTL2832U profile in-place; default is to create a RTL2832U configuration in the node folder")
+                      help="Update the RTL2832U profile in-place; default is to create a RTL2832U configuration in the node folder")
     parser.add_option("--rtlpath", dest="rtlpath", default="/devices/RTL2832U",
                       help="The device manager file system absolute path to the RTL2832U, default '/devices/RTL2832U'")
     parser.add_option("--silent", dest="silent", default=False, action="store_true",
