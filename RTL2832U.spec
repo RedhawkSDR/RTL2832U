@@ -31,7 +31,7 @@ Prefix:         %{_prefix}
 %define _infodir       %{_prefix}/info
 
 Name:           RTL2832U
-Version:        1.0.1
+Version:        1.0.2
 Release:        1%{?dist}
 Summary:        Device %{name}
 
