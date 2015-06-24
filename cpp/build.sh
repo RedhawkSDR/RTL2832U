@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # This file is protected by Copyright. Please refer to the COPYRIGHT file
 # distributed with this source distribution.
@@ -19,15 +19,18 @@
 # along with this program.  If not, see http://www.gnu.org/licenses/.
 #
 
+# Create the Makefile if necessary
+if [ ! -e Makefile ]; then
+  ./reconf
+  ./configure
+fi
 
-if [ "$1" = "clean" ]; then
-  make clean
+if [ $# == 1 ]; then
+    if [ $1 == 'clean' ]; then
+        make distclean
+    else
+        make -j $*
+    fi
 else
-  # Checks if build is newer than makefile (based on modification time)
-  if [ ! -e configure ] || [ ! -e Makefile ] || [ configure.ac -nt Makefile ] || [ Makefile.am -nt Makefile ]; then
-    ./reconf
-    ./configure
-  fi
-  make -j
-  exit 0
+    make -j $*
 fi

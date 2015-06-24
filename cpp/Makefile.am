@@ -18,13 +18,13 @@
 # along with this program.  If not, see http://www.gnu.org/licenses/.
 #
 
-ossieName = RTL2832U
-bindir = $(prefix)/dev/devices/RTL2832U/cpp$(BINDIR_SUFFIX)/
+ossieName = rh.RTL2832U
+bindir = $(prefix)/dev/devices/rh/RTL2832U/cpp$(BINDIR_SUFFIX)/
 bin_PROGRAMS = RTL2832U
 
-xmldir = $(prefix)/dev/devices/RTL2832U/
+xmldir = $(prefix)/dev/devices/rh/RTL2832U/
 dist_xml_DATA = ../RTL2832U.scd.xml ../RTL2832U.prf.xml ../RTL2832U.spd.xml
-confdir = $(prefix)/dev/devices/RTL2832U/
+confdir = $(prefix)/dev/devices/rh/RTL2832U/
 dist_conf_SCRIPTS = ../nodeconfig.py
 
 distclean-local:

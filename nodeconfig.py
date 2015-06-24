@@ -3,14 +3,14 @@
 # This file is protected by Copyright. Please refer to the COPYRIGHT file 
 # distributed with this source distribution.
 # 
-# This file is part of RTL2832U Device.
+# This file is part of rh.RTL2832U Device.
 # 
-# RTL2832U Device is free software: you can redistribute it and/or modify it under 
+# rh.RTL2832U Device is free software: you can redistribute it and/or modify it under 
 # the terms of the GNU Lesser General Public License as published by the Free 
 # Software Foundation, either version 3 of the License, or (at your option) any 
 # later version.
 # 
-# RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT 
+# rh.RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT 
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
 # FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
 # details.
@@ -48,12 +48,12 @@ class NodeConfig(object):
             if not os.path.exists(template):
                 raise ConfigurationError("%s missing" % template)
                 
-        self.nodedir = os.path.join(self.options.sdrroot, "dev", "nodes", self.options.nodename)
+        self.nodedir = os.path.join(self.options.sdrroot, "dev", "nodes", self.options.nodename.replace('.','/'))
         self.path_to_dcd = os.path.join(self.nodedir , "DeviceManager.dcd.xml")
             
         # Figure out where we are going to write the RTL2832U profile
         if self.options.inplace:
-            self.rtl2832U_path = os.path.join(self.options.sdrroot, "dev", "devices", "RTL2832U")
+            self.rtl2832U_path = os.path.join(self.options.sdrroot, "dev", "devices", "rh", "RTL2832U")
         else:
             self.rtl2832U_path = os.path.join(self.nodedir, "RTL2832U")
             
@@ -117,12 +117,12 @@ class NodeConfig(object):
         except OSError:
             raise Exception, "Could not create device manager directory"
 
-        RTL2832U_componentfile = 'RTL2832U_' + uuidgen()
+        RTL2832U_componentfile = 'rh.RTL2832U_' + uuidgen()
         if self.options.inplace:
-            compfiles = [{'id':RTL2832U_componentfile, 'localfile':os.path.join('/devices', 'RTL2832U', 'RTL2832U.spd.xml')}]
+            compfiles = [{'id':RTL2832U_componentfile, 'localfile':os.path.join('/devices', 'rh', 'RTL2832U', 'RTL2832U.spd.xml')}]
         else:
-            compfiles = [{'id':RTL2832U_componentfile, 'localfile':os.path.join('/nodes', self.options.nodename, 'RTL2832U', 'RTL2832U.spd.xml')}]
-        compplacements = [{'refid':RTL2832U_componentfile, 'instantiations':[{'id':self.uuids["componentinstantiation"], 'usagename':'RTL2832U_' + self.hostname.replace('.', '_')}]}]
+            compfiles = [{'id':RTL2832U_componentfile, 'localfile':os.path.join('/nodes', self.options.nodename.replace('.','/'), 'RTL2832U', 'RTL2832U.spd.xml')}]
+        compplacements = [{'refid':RTL2832U_componentfile, 'instantiations':[{'id':self.uuids["componentinstantiation"], 'usagename':'rh.RTL2832U_' + self.hostname.replace('.', '_')}]}]
 
         #####################
         # DeviceManager files
@@ -169,7 +169,7 @@ class NodeConfig(object):
         #####################
         
         if not self.options.silent:
-            self._log.debug("Creating RTL2832U profile <" + self.rtl2832U_path + ">")
+            self._log.debug("Creating rh.RTL2832U profile <" + self.rtl2832U_path + ">")
             
         if not self.options.inplace:
             if not os.path.exists(self.rtl2832U_path):
@@ -205,12 +205,12 @@ class NodeConfig(object):
         prfpath = os.path.join(self.rtl2832U_path, 'RTL2832U.prf.xml')
         _prf = parsers.PRFParser.parse(prfpath)
 
-	# Set the parameters for the target_device
+	    # Set the parameters for the target_device
         for struct in _prf.get_struct():
-	    if struct.get_name() in "target_device": 
-                for simple in struct.get_simple():
-		    if simple.get_name() in self.props:
-			simple.set_value(str(self.props[simple.get_name()]))
+            if struct.get_name() in "target_device": 
+                for simple in struct.get_props():
+                    if simple.get_name() in self.props:
+                        simple.set_value(str(self.props[simple.get_name()]))
 
         prf_out = open(prfpath, 'w')
         prf_out.write(parsers.parserconfig.getVersionXML())
@@ -244,12 +244,12 @@ if __name__ == "__main__":
                       help="Index of the targeted RTL in the list, if none is given, -1 is used")
     parser.add_option("--sdrroot", dest="sdrroot", default=os.path.expandvars("${SDRROOT}"),
                       help="Path to the sdr root; if none is given, ${SDRROOT} is used.")
-    parser.add_option("--nodename", dest="nodename", default="DevMgr_RTL2832U_%s" % socket.gethostname(),
-                      help="Desired nodename, if none is given DevMgr_RTL2832U_${HOST} is used")
+    parser.add_option("--nodename", dest="nodename", default="rh.DevMgr_RTL2832U_%s" % socket.gethostname(),
+                      help="Desired nodename, if none is given rh.DevMgr_RTL2832U_${HOST} is used")
     parser.add_option("--inplace", dest="inplace", default=False, action="store_true",
-                      help="Update the RTL2832U profile in-place; default is to create a RTL2832U configuration in the node folder")
-    parser.add_option("--rtlpath", dest="rtlpath", default="/devices/RTL2832U",
-                      help="The device manager file system absolute path to the RTL2832U, default '/devices/RTL2832U'")
+                      help="Update the rh.RTL2832U profile in-place; default is to create a rh.RTL2832U configuration in the node folder")
+    parser.add_option("--rtlpath", dest="rtlpath", default="/devices/rh/RTL2832U",
+                      help="The device manager file system absolute path to the rh.RTL2832U, default '/devices/rh/RTL2832U'")
     parser.add_option("--silent", dest="silent", default=False, action="store_true",
                       help="Suppress all logging except errors")
     parser.add_option("--clean", dest="clean", default=False, action="store_true",

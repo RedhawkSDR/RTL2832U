@@ -18,7 +18,7 @@
 # along with this program.  If not, see http://www.gnu.org/licenses/.
 #
 
-AC_INIT(RTL2832U, 1.0.1)
+AC_INIT(rh.RTL2832U, 1.0.2)
 AM_INIT_AUTOMAKE(nostdinc)
 
 AC_PROG_CC

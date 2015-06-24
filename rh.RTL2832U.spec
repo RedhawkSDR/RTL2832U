@@ -30,7 +30,7 @@ Prefix:         %{_prefix}
 %define _mandir        %{_prefix}/man
 %define _infodir       %{_prefix}/info
 
-Name:           RTL2832U
+Name:           rh.RTL2832U
 Version:        1.0.2
 Release:        1%{?dist}
 Summary:        Device %{name}
@@ -65,16 +65,17 @@ Device %{name}
 # Implementation cpp
 pushd cpp
 ./reconf
-%define _bindir %{_prefix}/dev/devices/RTL2832U/cpp
+%define _bindir %{_prefix}/dev/devices/rh/RTL2832U/cpp
 %configure
 make %{?_smp_mflags}
 popd
+
 
 %install
 rm -rf $RPM_BUILD_ROOT
 # Implementation cpp
 pushd cpp
-%define _bindir %{_prefix}/dev/devices/RTL2832U/cpp
+%define _bindir %{_prefix}/dev/devices/rh/RTL2832U/cpp
 make install DESTDIR=$RPM_BUILD_ROOT
 popd
 
@@ -85,12 +86,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,redhawk,redhawk,-)
-%dir %{_prefix}/dev/devices/%{name}
-%{_prefix}/dev/devices/%{name}/nodeconfig.py
-%{_prefix}/dev/devices/%{name}/nodeconfig.pyc
-%{_prefix}/dev/devices/%{name}/nodeconfig.pyo
-%{_prefix}/dev/devices/%{name}/RTL2832U.scd.xml
-%{_prefix}/dev/devices/%{name}/RTL2832U.prf.xml
-%{_prefix}/dev/devices/%{name}/RTL2832U.spd.xml
-%{_prefix}/dev/devices/%{name}/cpp
+%dir %{_prefix}/dev/devices/rh/RTL2832U
+%{_prefix}/dev/devices/rh/RTL2832U/nodeconfig.py
+%{_prefix}/dev/devices/rh/RTL2832U/nodeconfig.pyc
+%{_prefix}/dev/devices/rh/RTL2832U/nodeconfig.pyo
+%{_prefix}/dev/devices/rh/RTL2832U/RTL2832U.scd.xml
+%{_prefix}/dev/devices/rh/RTL2832U/RTL2832U.prf.xml
+%{_prefix}/dev/devices/rh/RTL2832U/RTL2832U.spd.xml
+%{_prefix}/dev/devices/rh/RTL2832U/cpp
 
