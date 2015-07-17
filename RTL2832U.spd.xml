@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE softpkg PUBLIC "-//JTRS//DTD SCA V2.2.2 SPD//EN" "softpkg.dtd">
 <!--
 This file is protected by Copyright. Please refer to the COPYRIGHT file
@@ -19,8 +19,8 @@ for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see http://www.gnu.org/licenses/.
 -->
-<softpkg version="1.0.2" id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="sca_compliant">
-  <title/>
+<softpkg id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="2.0.0" version="2.0.0">
+  <title></title>
   <author>
     <name>null</name>
   </author>
