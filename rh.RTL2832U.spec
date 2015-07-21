@@ -52,6 +52,8 @@ BuildRequires:  libusb1-devel >= 1.0.0
 BuildRequires:  librtlsdr >= 0.5.2
 Requires:       librtlsdr >= 0.5.2
 
+Obsoletes:      RTL2832U < 2.0.0
+
 
 %description
 Device %{name}
