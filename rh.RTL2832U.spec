@@ -40,12 +40,12 @@ License:        GPLv3+
 Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:  redhawk-devel >= 1.10
-Requires:       redhawk >= 1.10
+BuildRequires:  redhawk-devel >= 2.0
+Requires:       redhawk >= 2.0
 
 # Interface requirements
-BuildRequires:  frontendInterfaces >= 2.2 bulkioInterfaces >= 1.10
-Requires:       frontendInterfaces >= 2.2 bulkioInterfaces >= 1.10
+BuildRequires:  frontendInterfaces >= 2.2 bulkioInterfaces >= 2.0
+Requires:       frontendInterfaces >= 2.2 bulkioInterfaces >= 2.0
 
 # RTL requirements
 BuildRequires:  libusb1-devel >= 1.0.0
@@ -57,6 +57,8 @@ Obsoletes:      RTL2832U < 2.0.0
 
 %description
 Device %{name}
+ * Commit: __REVISION__
+ * Source Date/Time: __DATETIME__
 
 
 %prep
