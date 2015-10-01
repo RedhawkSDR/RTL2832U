@@ -1,10 +1,8 @@
-RTL2832U
-=========
+# REDHAWK Basic Devices rh.RTL2832U
 
 ## Description
 
-A frontendInterfaces compliant device for the RTL2832U usb dongle using librtlsdr
-  
+Contains the source and build script for the REDHAWK Basic Devices rh.RTL2832U. Realtek RTL2832U usb dongle device using librtlsdr. Supports various tuners, including Elonics E4000, Rafael Micro R820T and R828D, Fitipower FC0012 and FC0013, and FCI FC2580.
 
 ## Dependencies
 
@@ -22,7 +20,8 @@ and your debug level is at 'DEBUG' or 'TRACE', try and set the debug
 level as 'INFO'.
 
 ## Installation Instructions
-This asset requires the librtlsdr shared library. This must be installed in order to build and run this asset.
+
+This asset requires the librtlsdr library. This must be installed in order to build and run this asset.
 To build from source, run the `build.sh` script found at the top level directory. To install to $SDRROOT run, `build.sh install`
 
 ## Copyrights
@@ -31,4 +30,4 @@ This work is protected by Copyright. Please refer to the [Copyright File](COPYRI
 
 ## License
 
-RTL2832U is licensed under the GNU General Public License (GPL).
+REDHAWK Basic Devices rh.RTL2832U is licensed under the GNU General Public License (GPL).
