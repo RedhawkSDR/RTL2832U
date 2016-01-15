@@ -24,6 +24,10 @@ level as 'INFO'.
 This asset requires the librtlsdr library. This must be installed in order to build and run this asset.
 To build from source, run the `build.sh` script found at the top level directory. To install to $SDRROOT run, `build.sh install`
 
+## FEI Compliance Test Results
+
+See the [FEI Compliance Results](tests/FEI_Compliance_Results.md) document.
+
 ## Copyrights
 
 This work is protected by Copyright. Please refer to the [Copyright File](COPYRIGHT) for updated copyright information.
