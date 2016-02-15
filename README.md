@@ -22,7 +22,7 @@ level as 'INFO'.
 ## Installation Instructions
 
 This asset requires the librtlsdr library. This must be installed in order to build and run this asset.
-To build from source, run the `build.sh` script found at the top level directory. To install to $SDRROOT run, `build.sh install`
+To build from source, run the `build.sh` script found at the top level directory. To install to $SDRROOT, run `build.sh install`
 
 ## FEI Compliance Test Results
 
