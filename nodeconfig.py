@@ -208,7 +208,7 @@ class NodeConfig(object):
 	    # Set the parameters for the target_device
         for struct in _prf.get_struct():
             if struct.get_name() in "target_device": 
-                for simple in struct.get_props():
+                for simple in struct.get_simple():
                     if simple.get_name() in self.props:
                         simple.set_value(str(self.props[simple.get_name()]))
 
