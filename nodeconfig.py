@@ -246,8 +246,8 @@ if __name__ == "__main__":
                       help="Path to the sdr root; if none is given, ${SDRROOT} is used.")
     parser.add_option("--nodename", dest="nodename", default="rh.DevMgr_RTL2832U_%s" % socket.gethostname(),
                       help="Desired nodename, if none is given rh.DevMgr_RTL2832U_${HOST} is used")
-    parser.add_option("--inplace", dest="inplace", default=False, action="store_true",
-                      help="Update the rh.RTL2832U profile in-place; default is to create a rh.RTL2832U configuration in the node folder")
+    parser.add_option("--noinplace", dest="inplace", default=True, action="store_false",
+                      help="Create rh.RTL2832U configuration in the node folder; default is to update the rh.RTL2832U profile in-place.")
     parser.add_option("--rtlpath", dest="rtlpath", default="/devices/rh/RTL2832U",
                       help="The device manager file system absolute path to the rh.RTL2832U, default '/devices/rh/RTL2832U'")
     parser.add_option("--silent", dest="silent", default=False, action="store_true",
