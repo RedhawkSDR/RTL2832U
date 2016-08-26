@@ -19,7 +19,7 @@ for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see http://www.gnu.org/licenses/.
 -->
-<softpkg id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="2.0.0" version="2.0.0">
+<softpkg id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="2.0.0" version="2.0.1">
   <title></title>
   <author>
     <name>null</name>
