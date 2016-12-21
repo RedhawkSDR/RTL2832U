@@ -48,12 +48,7 @@ IMPL_ID='cpp'
 
 if 'RTL' in DUT:
     dut_name = 'RTL2832U'
-    dut_execparams = {'target_device':{'target::name':'',
-                                       'target::serial':'',
-                                       'target::vendor':'',
-                                       'target::product':'',
-                                       'target::index':0},
-                      'group_id':'FEI_UNIT_TESTING'
+    dut_execparams = {'group_id':'FEI_UNIT_TESTING'
                      }
     dut_capabilities = {'RX_DIGITIZER':{'COMPLEX': True,
                                         'CF_MAX': 1.1e9,
