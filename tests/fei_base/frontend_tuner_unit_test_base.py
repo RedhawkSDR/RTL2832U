@@ -109,7 +109,10 @@ class FrontendTunerTests(unittest.TestCase):
                                   'FRONTEND::tuner_status::tuner_number':[int,long]}
     
     # get lists of all methods/functions defined in digital tuner idl
-    digital_tuner_idl = filter(lambda x: x[0]!='_', TunerControl_idl._0_FRONTEND._objref_DigitalTuner.__methods__)
+    digital_tuner_idl = filter(lambda x: x[0]!='_', dir(TunerControl_idl._0_FRONTEND._objref_DigitalTuner))
+    # In future, could also do this:
+    #import frontend
+    #digital_tuner_idl = filter(lambda x: x[0]!='_', dir(frontend.InDigitalTunerPort))
     
     # map data types to DataSink port names
     port_map = {'dataShort':'shortIn',
