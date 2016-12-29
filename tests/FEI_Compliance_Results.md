@@ -16,11 +16,11 @@ The test may take several minutes to perform the 283 checks when successful. It 
 
 ```
 Report Statistics:
-   Checks that returned "FAIL" .................. 8
+   Checks that returned "FAIL" .................. 6
    Checks that returned "WARN" .................. 1
    Checks that returned "info" .................. 2
    Checks that returned "no" .................... 10
-   Checks that returned "ok" .................... 224
+   Checks that returned "ok" .................... 226
    Checks with silent results ................... 38
    Total checks made ............................ 283
 ```
@@ -52,28 +52,26 @@ tuner_status has UNKNOWN field FRONTEND::tuner_status::stream_id............WARN
 
 ### `FAIL` Details
 
-There are 8 checks that report `FAIL` with the RTL, and this is known.
+There are 6 checks that report `FAIL` with the RTL, and this is known.
 
 #### Multi-out port checks
 
-The RTL does not implement a multi-out port, which is acceptable since the RTL is a single channel device, but is considered bad practice nonetheless. It was done intentionally in order to make the RTL device as easy to use for a beginner as possible, without knowing all necessary steps to make use of a device with a multi-out port. This of course means the multi-out tests will fail, and since there are two ports, they'll each fails twice, once for each port. These failures are all expected.
+The RTL does not implement a multi-out port, which is acceptable since the RTL is a single channel device, but is considered bad practice nonetheless. It was done intentionally in order to make the RTL device as easy to use for a beginner as possible, without knowing all necessary steps to make use of a device with a multi-out port. This of course means the multi-out tests will fail, and since there are two ports, they'll each fail twice, once for each port. These failures are all expected.
 
 ```
 dataFloat_out: Did not receive data from tuner allocation with wrong
      alloc_id (multiport test)..............................................FAIL
 dataFloat_out: Did not receive correct SRI from tuner allocation with
      wrong alloc_id (multiport test)........................................FAIL
-dataFloat_out: Listener received EOS after deallocation of listener.........FAIL
 dataOctet_out: Did not receive data from tuner allocation with wrong
      alloc_id (multiport test)..............................................FAIL
 dataOctet_out: Did not receive correct SRI from tuner allocation with
      wrong alloc_id (multiport test)........................................FAIL
-dataOctet_out: Listener received EOS after deallocation of listener.........FAIL
 ```
 
 #### `setTunerGain` Errors
 
-Additionally, the `setTunerGain` function was implemented to be very forgiving for the same reasons as above (easy for beginner). Instead of producing an exception that indicates an invalid gain value was requested, the RTL simply sets the gain to be the nearest valid value (i.e. value greater than valid range is replaces with max valid value). Because of this, tests fail that check for invalid gain values to produce an exception, and this is expected.
+Additionally, the `setTunerGain` function was implemented to be very forgiving for the same reasons as above (easy for beginner). Instead of producing an exception that indicates an invalid gain value was requested, the RTL simply sets the gain to be the nearest valid value (i.e. value greater than valid range is replaces with max valid value). Because of this, tests would fail that check for invalid gain values to produce an exception, and this is expected.
 
 Reported Error:
 ```
@@ -85,13 +83,14 @@ Out-of-bounds setting of gain produces BadParameterException (produces
      FrontendException instead).............................................FAIL
 ```
 
+You will notice that the test actually failed because the wrong exception was produced. The invalid out-of-bounds gain value is replaced with a valid value before being set, but the valid value fails to be set because the `setTunerGain` function also fails for the reason described next.
+
 #### Auto-gain Control
 
 Lastly, the RTL has an auto-gain feature which is enabled by default. When enabled, attempts to manually set the gain will fail, which causes the `setTunerGain` tests with valid values to fail as well. This is expected (see the test output indicated that gain mode is auto).
 
 Reported Error:
 ```
-2015-10-15 17:13:38 INFO  RtlDevice:292 - RTL2832 agc mode set to disabled
 2015-10-15 17:13:38 INFO  RtlDevice:312 - Tuner gain mode set to auto
 ERROR: RX_DIG 3.19 Verify digital tuner port setTunerGain function in-bounds retune
 ```
