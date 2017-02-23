@@ -48,7 +48,8 @@ IMPL_ID='cpp'
 
 if 'RTL' in DUT:
     dut_name = 'RTL2832U'
-    dut_execparams = {'group_id':'FEI_UNIT_TESTING'
+    dut_execparams = {}
+    dut_configure = {'group_id':'FEI_UNIT_TESTING'
                      }
     dut_capabilities = {'RX_DIGITIZER':{'COMPLEX': True,
                                         'CF_MAX': 1.1e9,
@@ -92,6 +93,7 @@ DEVICE_INFO = {}
 DEVICE_INFO[dut_name] = dut_capabilities
 DEVICE_INFO[dut_name]['SPD'] = os.path.join(project_dir, 'RTL2832U.spd.xml')
 DEVICE_INFO[dut_name]['execparams'] = dut_execparams
+DEVICE_INFO[dut_name]['configure'] = dut_configure
 #******* DO NOT MODIFY ABOVE **********#
 
 
