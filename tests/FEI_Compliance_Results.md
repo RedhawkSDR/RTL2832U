@@ -8,7 +8,7 @@ To run [test\_RTL2832U\_FEI.py](test_RTL2832U_FEI.py), execute the following com
 python test_RTL2832U_FEI.py
 ```
 
-The test may take several minutes to perform the 283 checks when successful. It is common that fewer checks are made when unexpected failures occur, which prevent all checks from being made.
+The test may take several minutes to perform the checks when successful. It is common that fewer checks are made when unexpected failures occur, which prevent all checks from being made.
 
 ## Results
 
