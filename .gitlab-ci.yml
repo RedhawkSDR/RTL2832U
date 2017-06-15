@@ -1,0 +1,115 @@
+variables:
+  namespace: rh.
+  rh_20_release: '2.0.6'
+  rh_21_release: '2.1.1'
+
+.package: &package
+  image: ${docker_registry}utils/docker:latest-rpm
+  stage: build
+  tags:
+    - dind
+  script:
+    # Ensure newest version of FROM image
+    - docker pull ${docker_registry}rpmbuild:${dist}-${arch}-onbuild
+    # Use RPM release from specfile if this is a tag
+    - safe_version=$(echo ${short_version} | tr -d -)
+    - if [ -z "$CI_COMMIT_TAG" ]; then
+        redhawk_version=${latest_version}
+        rpm_release="0.$CI_PIPELINE_ID.rh${safe_version}";
+      else
+        redhawk_version=${release_version}
+        rpm_release="`rpm --query --queryformat "%{release}\n" --specfile ${namespace}$CI_PROJECT_NAME.spec | awk -F"." "{print $1}"`.rh${safe_version}";
+      fi
+    - other_repos=$yum_repo_url/redhawk/$redhawk_version/$dist/$arch
+    - docker pull ${docker_registry}rpmbuild:$dist-$arch-onbuild
+    - printf "FROM ${docker_registry}rpmbuild:$dist-$arch-onbuild" > Dockerfile
+    - name=$(echo $CI_PROJECT_NAME| tr '[:upper:]' '[:lower:]')
+    - docker build -t $name:latest-$dist-$arch --build-arg "project=$CI_PROJECT_NAME"
+                                               --build-arg "rpm_release=$rpm_release"
+                                               --build-arg "spec_file=${namespace}$CI_PROJECT_NAME.spec"
+                                               --build-arg "arch=$arch"
+                                               --build-arg "other_repos=$other_repos" .
+    - id=$(docker create $name:latest-$dist-$arch)
+    - docker cp $id:/root/rpmbuild/RPMS/ output/
+    - docker rm -f $id
+  artifacts:
+    paths:
+      - output/*/*.rpm
+    expire_in: 2 days
+
+package:el6:rh2.0:
+  variables:
+    latest_version: 2.0-nightly
+    release_version: $rh_20_release
+    short_version: '2.0'
+    dist: el6
+    arch: x86_64
+  <<: *package
+
+package:el6-i386:rh2.0:
+  variables:
+    latest_version: 2.0-nightly
+    release_version: $rh_20_release
+    short_version: '2.0'
+    dist: el6
+    arch: i686
+  <<: *package
+
+package:el7:rh2.0:
+  variables:
+    latest_version: 2.0-nightly
+    release_version: $rh_20_release
+    short_version: '2.0'
+    dist: el7
+    arch: x86_64
+  <<: *package
+
+package:el6:rh2.1:
+  variables:
+    latest_version: 2.1-nightly
+    release_version: $rh_21_release
+    short_version: '2.1'
+    dist: el6
+    arch: x86_64
+  <<: *package
+
+package:el6-i386:rh2.1:
+  variables:
+    latest_version: 2.1-nightly
+    release_version: $rh_21_release
+    short_version: '2.1'
+    dist: el6
+    arch: i686
+  <<: *package
+
+package:el7:rh2.1:
+  variables:
+    latest_version: 2.1-nightly
+    release_version: $rh_21_release
+    short_version: '2.1'
+    dist: el7
+    arch: x86_64
+  <<: *package
+
+deploy:
+  image: centos:7
+  stage: deploy
+  dependencies: []
+  script:
+    - if [ -n "$jenkins_url" ]; then
+        curl --insecure -X POST $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
+      fi
+  only:
+    - branches
+
+deploy:release:
+  image: centos:7
+  stage: deploy
+  dependencies: []
+  #Note, must set set associated redhawk_release
+  script:
+    - if [ -n "$jenkins_url" ]; then
+        curl --insecure -X POST $jenkins_url/job/$rh_21_release/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
+      fi
+  only:
+    - tags
