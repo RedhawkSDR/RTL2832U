@@ -99,3 +99,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/dev/devices/rh/RTL2832U/RTL2832U.spd.xml
 %{_prefix}/dev/devices/rh/RTL2832U/cpp
 
+%changelog
+* Wed Jun 21 2017 Ryan Bauman <rbauman@lgsinnovations.com> - 2.0.1-6
+- Mass rebuild for REDHAWK 2.1.1
+
