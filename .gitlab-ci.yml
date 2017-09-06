@@ -1,37 +1,41 @@
 variables:
-  namespace: rh.
   rh_20_release: '2.0.6'
   rh_21_release: '2.1.1'
+  librtl_version: '0.5.2'
+  namespace: rh.
 
-.package: &package
-  image: ${docker_registry}utils/docker:latest-rpm
-  stage: build
-  tags:
-    - dind
-  script:
-    # Ensure newest version of FROM image
-    - docker pull ${docker_registry}rpmbuild:${dist}-${arch}-onbuild
-    # Use RPM release from specfile if this is a tag
+#Global before script, determine if this is a tag and handle rpm release field accordingly
+before_script:
     - safe_version=$(echo ${short_version} | tr -d -)
+    - safe_ref=$(echo ${CI_COMMIT_REF_NAME} | tr -d /| tr '[:upper:]' '[:lower:]')
     - if [ -z "$CI_COMMIT_TAG" ]; then
         redhawk_version=${latest_version}
         rpm_release="0.$CI_PIPELINE_ID.rh${safe_version}";
       else
         redhawk_version=${release_version}
-        rpm_release="`rpm --query --queryformat "%{release}\n" --specfile ${namespace}$CI_PROJECT_NAME.spec | awk -F"." "{print $1}"`.rh${safe_version}";
+        rpm_release="`rpm --query --queryformat "%{release}\n" --specfile ${namespace}$CI_PROJECT_NAME.spec | head -n 1 | awk -F"." "{print $1}"`.rh${safe_version}";
       fi
-    - other_repos=$yum_repo_url/redhawk/$redhawk_version/$dist/$arch
-    - docker pull ${docker_registry}rpmbuild:$dist-$arch-onbuild
-    - printf "FROM ${docker_registry}rpmbuild:$dist-$arch-onbuild" > Dockerfile
+    - redhawk_repo=$yum_repo_url/redhawk-core-framework/$redhawk_version/$dist/$arch
+    - librtl_repo=$yum_repo_url/redhawk-dependencies/librtlsdr/$librtl_version/$dist/$arch
+
+.package: &package
+  image: ${docker_registry}${docker_rpm_repository}docker:latest-rpm
+  stage: build
+  tags:
+    - dind
+  script:
+    # Ensure newest version of FROM image
+    - docker pull ${docker_registry}${rpmbuild_repository}rpmbuild:${dist}-${arch}-onbuild
+    - printf "FROM ${docker_registry}${rpmbuild_repository}rpmbuild:$dist-$arch-onbuild" > Dockerfile
     - name=$(echo $CI_PROJECT_NAME| tr '[:upper:]' '[:lower:]')
-    - docker build -t $name:latest-$dist-$arch --build-arg "project=$CI_PROJECT_NAME"
+    - docker build -t $name:$safe_ref-$dist-$arch-rh${safe_version} --build-arg "project=$CI_PROJECT_NAME"
                                                --build-arg "rpm_release=$rpm_release"
                                                --build-arg "spec_file=${namespace}$CI_PROJECT_NAME.spec"
                                                --build-arg "arch=$arch"
-                                               --build-arg "other_repos=$other_repos" .
-    - id=$(docker create $name:latest-$dist-$arch)
+                                               --build-arg "other_repos=$redhawk_repo $librtl_repo" .
+    - id=$(docker create $name:$safe_ref-$dist-$arch-rh${safe_version})
     - docker cp $id:/root/rpmbuild/RPMS/ output/
-    - docker rm -f $id
+    - docker rm -f $id || true
   artifacts:
     paths:
       - output/*/*.rpm
@@ -95,21 +99,9 @@ deploy:
   image: centos:7
   stage: deploy
   dependencies: []
+  before_script:
+    - echo "Deploying to $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME"
   script:
     - if [ -n "$jenkins_url" ]; then
         curl --insecure -X POST $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
       fi
-  only:
-    - branches
-
-deploy:release:
-  image: centos:7
-  stage: deploy
-  dependencies: []
-  #Note, must set set associated redhawk_release
-  script:
-    - if [ -n "$jenkins_url" ]; then
-        curl --insecure -X POST $jenkins_url/job/$rh_21_release/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
-      fi
-  only:
-    - tags
