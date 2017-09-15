@@ -40,6 +40,9 @@ before_script:
     paths:
       - output/*/*.rpm
     expire_in: 2 days
+  #Skip on tag of following format
+  except:
+    - /^(\d+\.)?(\d+)?(\.\d+)$/
 
 package:el6:rh2.0:
   variables:
@@ -105,3 +108,6 @@ deploy:
     - if [ -n "$jenkins_url" ]; then
         curl --insecure -X POST $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
       fi
+  #Skip on tag of following format
+  except:
+    - /^(\d+\.)?(\d+)?(\.\d+)$/
