@@ -1,6 +1,6 @@
 variables:
-  rh_20_release: '2.0.6'
-  rh_21_release: '2.1.1'
+  rh_20_release: '2.0.7'
+  rh_21_release: '2.1.2'
   librtl_version: '0.5.2'
   namespace: rh.
 
