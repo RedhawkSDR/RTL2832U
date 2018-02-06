@@ -24,7 +24,7 @@ if [ "$1" = "rpm" ]; then
         mydir=`dirname $0`
         tmpdir=`mktemp -d`
         cp -r ${mydir} ${tmpdir}/rh.RTL2832U-2.0.2
-        tar czf ${tmpdir}/rh.RTL2832U-2.0.2.tar.gz --exclude=".svn" -C ${tmpdir} rh.RTL2832U-2.0.2
+        tar czf ${tmpdir}/rh.RTL2832U-2.0.2.tar.gz --exclude=".svn" --exclude=".git" -C ${tmpdir} rh.RTL2832U-2.0.2
         rpmbuild -ta ${tmpdir}/rh.RTL2832U-2.0.2.tar.gz
         rm -rf $tmpdir
     else
@@ -56,6 +56,10 @@ else
             ./reconf && ./configure && make $*
         else
             echo "No build.sh found for $impl"
+        fi
+        retval=$?
+        if [ $retval != '0' ]; then
+            exit $retval
         fi
         cd -
     done

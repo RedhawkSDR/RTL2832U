@@ -216,6 +216,15 @@ int RTL2832U_i::serviceFunction()
         return NOOP;
     }
 
+    //If Scanner
+    	//If scan plan is not set
+    		//return NOOP
+        // NumSamplesPerScan should be between min and rtl_tuner.buffer_size
+        // num_samps = rtlReceive(NumSamplesPerScan/SampleRate); // Receive the required length for a scan.
+        // if num_samps == NumSamplesPerScan/SampleRate
+    		//Push Data
+    		//Tune Device to next Freq
+
     long num_samps = rtlReceive(1.0); // 1 second timeout
     // if the buffer is full OR (overflow occurred and buffer isn't empty), push buffer out as is and move to next buffer
     if(rtl_tuner.buffer_size >= rtl_tuner.buffer_capacity || (num_samps < 0 && rtl_tuner.buffer_size > 0) ){
@@ -397,6 +406,24 @@ bool RTL2832U_i::deviceSetTuning(const frontend::frontend_tuner_allocation_struc
 
     rtl_tuner.update_sri = true;
 
+    return true;
+}
+
+bool RTL2832U_i::deviceSetTuningScan(const frontend::frontend_tuner_allocation_struct &request, const frontend::frontend_scanner_allocation_struct &scan_request, frontend_tuner_status_struct_struct &fts, size_t tuner_id){
+    /************************************************************
+
+    This function is called when the allocation request contains a scanner allocation
+
+    modify fts, which corresponds to this->frontend_tuner_status[tuner_id]
+      At a minimum, bandwidth, center frequency, and sample_rate have to be set
+      If the device is tuned to exactly what the request was, the code should be:
+        fts.bandwidth = request.bandwidth;
+        fts.center_frequency = request.center_frequency;
+        fts.sample_rate = request.sample_rate;
+
+    return true if the tuning succeeded, and false if it failed
+    ************************************************************/
+    #warning deviceSetTuningScan(): Evaluate whether or not a tuner is added  *********
     return true;
 }
 
@@ -696,7 +723,27 @@ double RTL2832U_i::getTunerOutputSampleRate(const std::string& allocation_id){
     frontend_tuner_status[idx].sample_rate = frontend_tuner_status[idx].bandwidth = rtl_device_ptr->getRate();
     return frontend_tuner_status[idx].sample_rate;
 }
+frontend::ScanStatus RTL2832U_i::getScanStatus(const std::string& allocation_id) {
+    long idx = getTunerMapping(allocation_id);
+    if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
+    frontend::ManualStrategy* tmp = new frontend::ManualStrategy(0);
+    frontend::ScanStatus retval(tmp);
+    return retval;
+}
 
+void RTL2832U_i::setScanStartTime(const std::string& allocation_id, BULKIO::PrecisionUTCTime& start_time) {
+    long idx = getTunerMapping(allocation_id);
+    if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
+    if(allocation_id != getControlAllocationId(idx))
+        throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
+}
+
+void RTL2832U_i::setScanStrategy(const std::string& allocation_id, frontend::ScanStrategy& scan_strategy) {
+    long idx = getTunerMapping(allocation_id);
+    if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
+    if(allocation_id != getControlAllocationId(idx))
+        throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
+}
 /*************************************************************
 Functions servicing the RFInfo port(s)
 - port_name is the port over which the call was received

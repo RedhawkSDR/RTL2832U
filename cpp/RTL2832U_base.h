@@ -1,24 +1,5 @@
-/*
- * This file is protected by Copyright. Please refer to the COPYRIGHT file
- * distributed with this source distribution.
- *
- * This file is part of RTL2832U Device.
- *
- * RTL2832U Device is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or (at your
- * option) any later version.
- *
- * RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- */
-#ifndef RTL2832U_IMPL_BASE_H
-#define RTL2832U_IMPL_BASE_H
+#ifndef RTL2832U_BASE_IMPL_BASE_H
+#define RTL2832U_BASE_IMPL_BASE_H
 
 #include <boost/thread.hpp>
 #include <frontend/frontend.h>
@@ -29,9 +10,8 @@
 #include "struct_props.h"
 
 #define BOOL_VALUE_HERE 0
-#define DOUBLE_VALUE_HERE 0
 
-class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status_struct_struct>, public virtual frontend::digital_tuner_delegation, public virtual frontend::rfinfo_delegation, protected ThreadedComponent
+class RTL2832U_base : public frontend::FrontendScanningTunerDevice<frontend_tuner_status_struct_struct>, public virtual frontend::digital_scanning_tuner_delegation, public virtual frontend::rfinfo_delegation, protected ThreadedComponent
 {
     public:
         RTL2832U_base(char *devMgr_ior, char *id, char *lbl, char *sftwrPrfl);
@@ -56,25 +36,34 @@ class RTL2832U_base : public frontend::FrontendTunerDevice<frontend_tuner_status
 
     protected:
         // Member variables exposed as properties
+        /// Property: update_available_devices
         bool update_available_devices;
+        /// Property: group_id
         std::string group_id;
+        /// Property: digital_agc_enable
         bool digital_agc_enable;
+        /// Property: frequency_correction
         short frequency_correction;
+        /// Property: target_device
         target_device_struct target_device;
+        /// Property: current_device
         current_device_struct current_device;
+        /// Property: available_devices
         std::vector<rtl_device_struct_struct> available_devices;
 
         // Ports
+        /// Port: RFInfo_in
         frontend::InRFInfoPort *RFInfo_in;
-        frontend::InDigitalTunerPort *DigitalTuner_in;
+        /// Port: DigitalTuner_in
+        frontend::InDigitalScanningTunerPort *DigitalTuner_in;
+        /// Port: dataOctet_out
         bulkio::OutOctetPort *dataOctet_out;
+        /// Port: dataFloat_out
         bulkio::OutFloatPort *dataFloat_out;
 
         std::map<std::string, std::string> listeners;
 
-        virtual void setNumChannels(size_t num);
-
     private:
         void construct();
 };
-#endif // RTL2832U_IMPL_BASE_H
+#endif // RTL2832U_BASE_IMPL_BASE_H

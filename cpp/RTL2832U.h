@@ -188,6 +188,11 @@ class RTL2832U_i : public RTL2832U_base
 
         /* acquires the prop_lock and the rtl_tuner.lock */
         void set_rfinfo_pkt(const std::string& port_name, const frontend::RFInfoPkt& pkt);
+        frontend::ScanStatus getScanStatus(const std::string& allocation_id);
+
+        void setScanStartTime(const std::string& allocation_id, BULKIO::PrecisionUTCTime& start_time);
+
+        void setScanStrategy(const std::string& allocation_id, frontend::ScanStrategy& scan_strategy);
 
     private:
         ////////////////////////////////////////
@@ -201,6 +206,8 @@ class RTL2832U_i : public RTL2832U_base
         void deviceDisable(frontend_tuner_status_struct_struct &fts, size_t tuner_id);
 
         bool deviceSetTuning(const frontend::frontend_tuner_allocation_struct &request, frontend_tuner_status_struct_struct &fts, size_t tuner_id);
+
+        bool deviceSetTuningScan(const frontend::frontend_tuner_allocation_struct &request, const frontend::frontend_scanner_allocation_struct &scan_request, frontend_tuner_status_struct_struct &fts, size_t tuner_id);
 
         bool deviceDeleteTuning(frontend_tuner_status_struct_struct &fts, size_t tuner_id);
 

@@ -1,23 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-This file is protected by Copyright. Please refer to the COPYRIGHT file
-distributed with this source distribution.
-
-This file is part of RTL2832U Device.
-
-RTL2832U Device is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-RTL2832U Device is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see http://www.gnu.org/licenses/.
--->
 <!DOCTYPE softwarecomponent PUBLIC "-//JTRS//DTD SCA V2.2.2 SCD//EN" "softwarecomponent.dtd">
 <softwarecomponent>
   <corbaversion>2.2</corbaversion>
@@ -34,7 +15,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
       <provides repid="IDL:FRONTEND/RFInfo:1.0" providesname="RFInfo_in">
         <porttype type="data"/>
       </provides>
-      <provides repid="IDL:FRONTEND/DigitalTuner:1.0" providesname="DigitalTuner_in">
+      <provides repid="IDL:FRONTEND/DigitalScanningTuner:1.0" providesname="DigitalTuner_in">
         <porttype type="control"/>
       </provides>
       <uses repid="IDL:BULKIO/dataOctet:1.0" usesname="dataOctet_out">
@@ -77,5 +58,10 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
       <inheritsinterface repid="IDL:BULKIO/ProvidesPortStatisticsProvider:1.0"/>
       <inheritsinterface repid="IDL:BULKIO/updateSRI:1.0"/>
     </interface>
+    <interface name="DigitalScanningTuner" repid="IDL:FRONTEND/DigitalScanningTuner:1.0">
+      <inheritsinterface repid="IDL:FRONTEND/ScanningTuner:1.0"/>
+      <inheritsinterface repid="IDL:FRONTEND/DigitalTuner:1.0"/>
+    </interface>
+    <interface name="ScanningTuner" repid="IDL:FRONTEND/ScanningTuner:1.0"/>
   </interfaces>
 </softwarecomponent>
