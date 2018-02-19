@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE softpkg PUBLIC "-//JTRS//DTD SCA V2.2.2 SPD//EN" "softpkg.dtd">
-<softpkg id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="2.1.3" version="2.0.2">
+<softpkg id="DCE:b017497c-1a2b-11e5-92ad-3417ebc4aab5" name="rh.RTL2832U" type="2.1.3" version="2.1.0">
   <title></title>
   <author>
     <name>null</name>
