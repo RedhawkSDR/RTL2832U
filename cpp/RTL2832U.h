@@ -118,6 +118,21 @@ struct rtlCapabilitiesStruct {
     double gain_min;
 };
 
+struct scanSettings {
+	std::vector<double> scanFrequencies; // List of Frequencies to scan
+	short currentScanIndex; //Current index in scanFrequencies
+	double scanTime; //Time to dwell in each scan
+	BULKIO::PrecisionUTCTime scan_start_time;
+	scanSettings () {
+		currentScanIndex = 0;
+		scanTime = 0;
+
+
+	}
+
+
+};
+
 class RTL2832U_i : public RTL2832U_base
 {
     ENABLE_LOGGING
@@ -132,7 +147,7 @@ class RTL2832U_i : public RTL2832U_base
         int serviceFunction();
 
         /* acquires the prop_lock and the rtl_tuner.lock */
-        void initialize() throw (CF::LifeCycle::InitializeError, CORBA::SystemException);
+       // void initialize() throw (CF::LifeCycle::InitializeError, CORBA::SystemException);
 
     protected:
 
@@ -190,9 +205,9 @@ class RTL2832U_i : public RTL2832U_base
         void set_rfinfo_pkt(const std::string& port_name, const frontend::RFInfoPkt& pkt);
         frontend::ScanStatus getScanStatus(const std::string& allocation_id);
 
-        void setScanStartTime(const std::string& allocation_id, BULKIO::PrecisionUTCTime& start_time);
+        void setScanStartTime(const std::string& allocation_id, const BULKIO::PrecisionUTCTime& start_time);
 
-        void setScanStrategy(const std::string& allocation_id, frontend::ScanStrategy& scan_strategy);
+        void setScanStrategy(const std::string& allocation_id, const frontend::ScanStrategy* scan_strategy);
 
     private:
         ////////////////////////////////////////
@@ -249,6 +264,8 @@ class RTL2832U_i : public RTL2832U_base
         // capabilities of target rtl device
         // - protected by prop_lock
         rtlCapabilitiesStruct rtl_capabilities;
+
+        scanSettings scan_settings;
 
         //
         // configure callbacks
