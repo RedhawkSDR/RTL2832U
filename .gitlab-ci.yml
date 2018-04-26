@@ -1,6 +1,6 @@
 variables:
-  rh_20_release: '2.0.7'
-  rh_21_release: '2.1.2'
+  rh_20_release: '2.0.8'
+  rh_21_release: '2.1.3'
   librtl_version: '0.5.2'
   namespace: rh.
 
@@ -22,26 +22,29 @@ before_script:
   image: ${docker_registry}${docker_rpm_repository}docker:latest-rpm
   stage: build
   tags:
-    - dind
+    - ca
+    - docker
   script:
-    # Ensure newest version of FROM image
-    - docker pull ${docker_registry}${rpmbuild_repository}rpmbuild:${dist}-${arch}-onbuild
     - printf "FROM ${docker_registry}${rpmbuild_repository}rpmbuild:$dist-$arch-onbuild" > Dockerfile
-    - name=$(echo $CI_PROJECT_NAME| tr '[:upper:]' '[:lower:]')
-    - docker build -t $name:$safe_ref-$dist-$arch-rh${safe_version} --build-arg "project=$CI_PROJECT_NAME"
-                                               --build-arg "rpm_release=$rpm_release"
-                                               --build-arg "spec_file=${namespace}$CI_PROJECT_NAME.spec"
-                                               --build-arg "arch=$arch"
-                                               --build-arg "other_repos=$redhawk_repo $librtl_repo" .
-    - id=$(docker create $name:$safe_ref-$dist-$arch-rh${safe_version})
-    - docker cp $id:/root/rpmbuild/RPMS/ output/
-    - docker rm -f $id || true
+    - docker login ${docker_registry} -u ${docker_user} -p ${docker_password}
+    - docker image build --pull
+                         --tag=$CI_PROJECT_PATH_SLUG-$safe_ref-$dist-$arch-rh${safe_version}
+                         --build-arg "project=$CI_PROJECT_NAME"
+                         --build-arg "rpm_release=$rpm_release"
+                         --build-arg "spec_file=${namespace}$CI_PROJECT_NAME.spec"
+                         --build-arg "arch=$arch"
+                         --build-arg "other_repos=$redhawk_repo $librtl_repo" .
+    - id=$(docker container create $CI_PROJECT_PATH_SLUG-$safe_ref-$dist-$arch-rh${safe_version})
+    - docker container cp $id:/root/rpmbuild/RPMS/ output/
+    - docker container rm -f $id || true
+    - docker image rm -f $CI_PROJECT_PATH_SLUG-$safe_ref-$dist-$arch-rh${safe_version} || true
   artifacts:
     paths:
       - output/*/*.rpm
     expire_in: 2 days
-  #Skip on tag of following format
   except:
+    - master
+    - /^.*-external$/
     - /^(\d+\.)?(\d+)?(\.\d+)$/
 
 package:el6:rh2.0:
@@ -99,7 +102,7 @@ package:el7:rh2.1:
   <<: *package
 
 deploy:
-  image: centos:7
+  image: ${docker_registry}centos:7
   stage: deploy
   dependencies: []
   before_script:
@@ -108,6 +111,7 @@ deploy:
     - if [ -n "$jenkins_url" ]; then
         curl --insecure -X POST $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
       fi
-  #Skip on tag of following format
   except:
+    - master
+    - /^.*-external$/
     - /^(\d+\.)?(\d+)?(\.\d+)$/
