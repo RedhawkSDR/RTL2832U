@@ -20,9 +20,9 @@ Report Statistics:
    Checks that returned "WARN" .................. 1
    Checks that returned "info" .................. 2
    Checks that returned "no" .................... 10
-   Checks that returned "ok" .................... 229
+   Checks that returned "ok" .................... 231
    Checks with silent results ................... 38
-   Total checks made ............................ 286
+   Total checks made ............................ 288
 ```
 
 * `FAIL` indicates the test failed. It may be acceptable to fail a test depending on the device/design. See below.
