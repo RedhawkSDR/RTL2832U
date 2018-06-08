@@ -3629,8 +3629,8 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                 count= count+1
             time.sleep(.1)
 
-        # The exact number of blocks that a device will produce in a second is limited by settling time and execution time of the device. This check tests that we received at least 50% of the theoretical maximum
-        self.check(datablocks>10,True,'%s: Received Reasonable Number of Data blocks. Expected at least 10 but received %s '%(comp_port_name,datablocks))
+        # The exact number of blocks that a device will produce during the test is limited by settling time and execution time of the device. This check tests that we received at least 5 blocks are received and less than the theoretical maximum
+        self.check(datablocks>5,True,'%s: Received Reasonable Number of Data blocks. Expected at least 5 but received %s '%(comp_port_name,datablocks))
         self.check(datablocks<20,True,'%s: Received Reasonable Number of Data blocks. Expected no more than 20 but received %s '%(comp_port_name,datablocks))
         
                 #Allocate Scanner 
@@ -3762,8 +3762,8 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                 count= count+1
             time.sleep(.1)
 
-        # The exact number of blocks that a device will produce in a second is limited by settling time and execution time of the device. This check tests that we received at least 50% of the theoretical maximum
-        self.check(datablocks>10,True,'%s: DISCRETE Scan: Received Reasonable Number of Data blocks. Expected at least 10 but received %s '%(comp_port_name,datablocks))
+        # The exact number of blocks that a device will produce during the test is limited by settling time and execution time of the device. This check tests that we received at least 5 blocks are received and less than the theoretical maximum
+        self.check(datablocks>5,True,'%s: DISCRETE Scan: Received Reasonable Number of Data blocks. Expected at least 5 but received %s '%(comp_port_name,datablocks))
         self.check(datablocks<20,True,'%s: DISCRETE Scan: Received Reasonable Number of Data blocks. Expected no more than 20 but received %s '%(comp_port_name,datablocks))
         
                 #Allocate Scanner 
