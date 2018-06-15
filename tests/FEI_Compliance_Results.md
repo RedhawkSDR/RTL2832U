@@ -16,13 +16,13 @@ The test may take several minutes to perform the checks when successful. It is c
 
 ```
 Report Statistics:
-   Checks that returned "FAIL" .................. 6
+   Checks that returned "FAIL" .................. 5
    Checks that returned "WARN" .................. 1
    Checks that returned "info" .................. 2
-   Checks that returned "no" .................... 10
-   Checks that returned "ok" .................... 231
-   Checks with silent results ................... 38
-   Total checks made ............................ 288
+   Checks that returned "no" .................... 20
+   Checks that returned "ok" .................... 308
+   Checks with silent results ................... 98
+   Total checks made ............................ 436
 ```
 
 * `FAIL` indicates the test failed. It may be acceptable to fail a test depending on the device/design. See below.
@@ -52,21 +52,19 @@ tuner_status has UNKNOWN field FRONTEND::tuner_status::stream_id............WARN
 
 ### `FAIL` Details
 
-There are 6 checks that report `FAIL` with the RTL, and this is known.
+There are 5 checks that report `FAIL` with the RTL, and this is known.
 
 #### Multi-out port checks
 
 The RTL does not implement a multi-out port, which is acceptable since the RTL is a single channel device, but is considered bad practice nonetheless. It was done intentionally in order to make the RTL device as easy to use for a beginner as possible, without knowing all necessary steps to make use of a device with a multi-out port. This of course means the multi-out tests will fail, and since there are two ports, they'll each fail twice, once for each port. These failures are all expected.
 
 ```
-dataFloat_out: Did not receive data from tuner allocation with wrong
-     alloc_id (multiport test)..............................................FAIL
-dataFloat_out: Did not receive correct SRI from tuner allocation with
-     wrong alloc_id (multiport test)........................................FAIL
-dataOctet_out: Did not receive data from tuner allocation with wrong
-     alloc_id (multiport test)..............................................FAIL
-dataOctet_out: Did not receive correct SRI from tuner allocation with
-     wrong alloc_id (multiport test)........................................FAIL
+_testBULKIO: dataFloat_out: multi-out test: Received a stream on port
+     with bad connection ID.................................................FAIL
+_testBULKIO: dataFloat_out: multi-out test: Received a stream on port
+     with bad connection ID.................................................FAIL
+
+
 ```
 
 #### `setTunerGain` Errors
@@ -79,15 +77,17 @@ ERROR: RX_DIG 3.23 Verify digital tuner port setTunerGain function out of bounds
 ```
 Failed check:
 ```
-Out-of-bounds setting of gain produces BadParameterException (produces
-     FrontendException instead).............................................FAIL
+testFRONTEND_3_3_23: Out-of-bounds setting of gain produces
+     BadParameterException (produces FrontendException instead).............FAIL
+
+
 ```
 
 You will notice that the test actually failed because the wrong exception was produced. The invalid out-of-bounds gain value is replaced with a valid value before being set, but the valid value fails to be set because the `setTunerGain` function also fails for the reason described next.
 
 #### Auto-gain Control
 
-Lastly, the RTL has an auto-gain feature which is enabled by default. When enabled, attempts to manually set the gain will fail, which causes the `setTunerGain` tests with valid values to fail as well. This is expected (see the test output indicated that gain mode is auto).
+The RTL has an auto-gain feature which is enabled by default. When enabled, attempts to manually set the gain will fail, which causes the `setTunerGain` tests with valid values to fail as well. This is expected (see the test output indicated that gain mode is auto).
 
 Reported Error:
 ```
@@ -96,7 +96,15 @@ ERROR: RX_DIG 3.19 Verify digital tuner port setTunerGain function in-bounds ret
 ```
 Failed check:
 ```
-In-bounds setting of gain - set to minimum gain (0.0) produces
-     FrontendException......................................................FAIL
+testFRONTEND_3_3_19: In-bounds setting of gain - set to minimum gain
+     (0.0) produces FrontendException.......................................FAIL
 ```
 
+#### Rf Info Packet Test
+
+The RF Info packet test makes some assumptions about the frequency range of the device which is not true for the RTL so this test fails. 
+
+'''
+testFRONTEND_RF_Info_Pkt: Allocate RX_DIGITIZER with correct RF_Flow_ID
+     check (returns False)..................................................FAIL
+'''

@@ -837,8 +837,28 @@ double RTL2832U_i::getTunerOutputSampleRate(const std::string& allocation_id){
 frontend::ScanStatus RTL2832U_i::getScanStatus(const std::string& allocation_id) {
     long idx = getTunerMapping(allocation_id);
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
-    frontend::ManualStrategy* tmp = new frontend::ManualStrategy(0);
+
+    // We need to cast the stored off ScanStrategy to one of the three types before returning
+    frontend::ScanStrategy* tmp =0;
+    if (scan_strategy_request->scan_mode ==frontend::SPAN_SCAN) {
+    	const frontend::SpanStrategy* _strat = dynamic_cast<const frontend::SpanStrategy*>(scan_strategy_request.get());
+    	tmp = new frontend::SpanStrategy(*_strat);
+    }else if (scan_strategy_request->scan_mode ==frontend::DISCRETE_SCAN) {
+    	const frontend::DiscreteStrategy* _strat = dynamic_cast<const frontend::DiscreteStrategy*>(scan_strategy_request.get());
+    	tmp = new frontend::DiscreteStrategy(*_strat);
+    }else if (scan_strategy_request->scan_mode==frontend::MANUAL_SCAN) {
+    	const frontend::ManualStrategy* _strat = dynamic_cast<const frontend::ManualStrategy*>(scan_strategy_request.get());
+    	tmp = new frontend::ManualStrategy(*_strat);
+    }else {
+   	    throw FRONTEND::FrontendException("Unknown Error. Scan Strategy not one of the three expected types");
+    }
+
     frontend::ScanStatus retval(tmp);
+
+    retval.start_time = scan_settings.scan_start_time;
+    retval.center_tune_frequencies = scan_settings.scanFrequencies;
+	bool scan_started = (scan_settings.scan_start_time >=bulkio::time::utils::now());
+	retval.started = (frontend_tuner_status[1].enabled and scan_started);
     return retval;
 }
 
@@ -847,7 +867,6 @@ void RTL2832U_i::setScanStartTime(const std::string& allocation_id, const BULKIO
     if (idx < 0) throw FRONTEND::FrontendException("Invalid allocation id");
     if(allocation_id != getControlAllocationId(idx))
         throw FRONTEND::FrontendException(("ID "+allocation_id+" does not have authorization to modify the tuner").c_str());
-    //TODO : Set Scan Start Time
     scan_settings.scan_start_time = start_time;
 }
 
@@ -863,7 +882,8 @@ void RTL2832U_i::setScanStrategy(const std::string& allocation_id, const fronten
     // Compute Center Frequencies
     if (scan_strategy->scan_mode ==frontend::SPAN_SCAN) {
     	const frontend::SpanStrategy* _strat = dynamic_cast<const frontend::SpanStrategy*>(scan_strategy);
-        for (unsigned int i=0; i<_strat->freq_scan_list.size();i++) {
+        scan_strategy_request.reset(new frontend::SpanStrategy(*_strat));
+    	for (unsigned int i=0; i<_strat->freq_scan_list.size();i++) {
 
     		unsigned int num_steps = (int)ceil((_strat->freq_scan_list[i].end_frequency -
     				                  _strat->freq_scan_list[i].begin_frequency) /
@@ -876,20 +896,16 @@ void RTL2832U_i::setScanStrategy(const std::string& allocation_id, const fronten
     	}
     } else if (scan_strategy->scan_mode ==frontend::DISCRETE_SCAN) {
     	const frontend::DiscreteStrategy* _strat = dynamic_cast<const frontend::DiscreteStrategy*>(scan_strategy);
-
+    	scan_strategy_request.reset(new frontend::DiscreteStrategy(*_strat));
     	scan_settings.scanFrequencies=_strat->discrete_freq_list;
 
     }else if (scan_strategy->scan_mode==frontend::MANUAL_SCAN) {
     	const frontend::ManualStrategy* _strat = dynamic_cast<const frontend::ManualStrategy*>(scan_strategy);
+    	scan_strategy_request.reset(new frontend::ManualStrategy(*_strat));
     	scan_settings.scanFrequencies.push_back(_strat->center_frequency);
     } else {
     	 throw FRONTEND::FrontendException("Unknown Error. Scan Strategy not one of the three expected types");
     }
-    //TODO : Handle other scanning Modes
-
-
-    // TODO: Check that the amount of data to grab is less than one buffer_size
-    // NumSamplesPerScan should be between min and rtl_tuner.buffer_size
 
     // Compute Dwell Time
     // If sample count:

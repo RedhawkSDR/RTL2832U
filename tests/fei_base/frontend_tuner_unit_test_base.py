@@ -163,7 +163,10 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                                   'FRONTEND::tuner_status::output_vlan':[int,long],
                                   'FRONTEND::tuner_status::output_port':[int,long],
                                   'FRONTEND::tuner_status::decimation':[int,long],
-                                  'FRONTEND::tuner_status::tuner_number':[int,long]}
+                                  'FRONTEND::tuner_status::tuner_number':[int,long],
+                                  'FRONTEND::tuner_status::supports_scan':[bool],
+                                  'FRONTEND::tuner_status::scan_mode_enabled':[bool],
+                                  }
     
     # get lists of all methods/functions defined in digital tuner idl
     digital_tuner_idl = filter(lambda x: x[0]!='_', dir(TunerControl_idl._0_FRONTEND._objref_DigitalTuner))
@@ -3710,11 +3713,24 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
             
         #Get Scan Status
         try:
-            tuner_controlPort.getScanStatus(alloc_id)
+            scan_status = tuner_controlPort.getScanStatus(alloc_id)
+
+            print scan_status
         except:
             print(traceback.format_exc())
-            self.check(False, True, "DISCRETE Scan: Setting Scan Strategy Failed")
+            self.check(False, True, "DISCRETE Scan: Getting Scan Status Failed")
+                    
+        self.check(scan_status.strategy.scan_mode,FRONTEND.ScanningTuner.DISCRETE_SCAN, "Get Scan Status values: scan_mode. Got %s" %scan_status.strategy.scan_mode)
+        self.check(scan_status.strategy.control_value,allocationScanner_dict['CONTROL_LIMIT'], "Get Scan Status values: control_value. got %s " %scan_status.strategy.control_value)
+        self.check(scan_status.strategy.control_mode,FRONTEND.ScanningTuner.SAMPLE_BASED, "Get Scan Status values: control_mode. Got %s" %scan_status.strategy.control_mode)
         
+        #Compare Freq List 
+        match = True
+        for freq in scan_status.center_tune_frequencies:
+            if freq not in freqs:
+                match = False
+        self.check(match, True, "Get Scan Status center tune frequencies")
+
         # Setup Data Sink
         for port in sorted(self.scd.get_componentfeatures().get_ports().get_uses(),reverse=True):
             comp_port_type = port.get_repid().split(':')[1].split('/')[-1]
@@ -3765,6 +3781,16 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         # The exact number of blocks that a device will produce during the test is limited by settling time and execution time of the device. This check tests that we received at least 5 blocks are received and less than the theoretical maximum
         self.check(datablocks>5,True,'%s: DISCRETE Scan: Received Reasonable Number of Data blocks. Expected at least 5 but received %s '%(comp_port_name,datablocks))
         self.check(datablocks<20,True,'%s: DISCRETE Scan: Received Reasonable Number of Data blocks. Expected no more than 20 but received %s '%(comp_port_name,datablocks))
+        
+
+        #Get Scan Status
+        try:
+            scan_status = tuner_controlPort.getScanStatus(alloc_id)
+        except:
+            print(traceback.format_exc())
+            self.check(False, True, "DISCRETE Scan: Getting Scan Status Failed")
+        
+        
         
                 #Allocate Scanner 
         try:

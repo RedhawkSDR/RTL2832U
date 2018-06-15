@@ -266,7 +266,7 @@ class RTL2832U_i : public RTL2832U_base
         rtlCapabilitiesStruct rtl_capabilities;
 
         scanSettings scan_settings;
-
+        boost::scoped_ptr<frontend::ScanStrategy> scan_strategy_request;
         //
         // configure callbacks
         //
