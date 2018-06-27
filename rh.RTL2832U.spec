@@ -40,12 +40,12 @@ License:        GPLv3+
 Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:  redhawk-devel >= 2.0
-Requires:       redhawk >= 2.0
+BuildRequires:  redhawk-devel >= 2.1.3
+Requires:       redhawk >= 2.1.3
 
 # Interface requirements
-BuildRequires:  frontendInterfaces >= 2.2 bulkioInterfaces >= 2.0
-Requires:       frontendInterfaces >= 2.2 bulkioInterfaces >= 2.0
+BuildRequires:  frontendInterfaces >= 2.3 bulkioInterfaces >= 2.1
+Requires:       frontendInterfaces >= 2.3 bulkioInterfaces >= 2.1
 
 # RTL requirements
 BuildRequires:  libusb1-devel >= 1.0.0
