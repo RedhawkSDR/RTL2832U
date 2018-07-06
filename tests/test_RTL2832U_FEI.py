@@ -45,10 +45,10 @@ dut_config = {}
 '''
 
 #******* MODIFY CONFIG BELOW **********#
-DUT = 'RTL|E4000'
+DUT = 'RTL'
 
 # Optional:
-DEBUG_LEVEL = 5    # typical values include 0, 1, 2, 3, 4 and 5
+DEBUG_LEVEL = 3    # typical values include 0, 1, 2, 3, 4 and 5
 DUT_INDEX = 1
 DUT_IP_ADDR = None
 DUT_PORT = None

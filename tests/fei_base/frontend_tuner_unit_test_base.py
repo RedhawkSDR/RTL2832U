@@ -236,7 +236,7 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         # For the optional parameters check we don't want to actually fail the test, just point it out. 
         self.testsPassed[self.currentTestName] = True
     
-    # map data types to DataSink port names
+    # map data types to DataSink/StreamSink port names
     port_map = {'dataShort':'shortIn',
                 'dataFloat':'floatIn',
                 'dataUlong':'uLongIn',
@@ -300,10 +300,16 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
             execparams['DEBUG_LEVEL'] = DEBUG_LEVEL
             #Add custom execparams here
             for param,val in DEVICE_INFO['execparams'].items():
-                properties[param] = val
+                execparams[param] = val
         
         #Add custom configure here
         for param,val in DEVICE_INFO['configure'].items():
+            configure[param] = val
+
+        #Add execparams and configure to properties
+        for param,val in execparams.items():
+            properties[param] = val
+        for param,val in configure.items():
             properties[param] = val
                 
         ### device-specific pre-launch commands
@@ -2381,27 +2387,27 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         print 'Testing data flow on port:',comp_port_type,comp_port_name
         pp(controller)
         comp_port_obj = self.dut.getPort(str(comp_port_name))
-        dataSink1 = sb.DataSink()
-        dataSink2 = sb.DataSink()
-        dataSink3 = sb.DataSink()
-        dataSink4 = sb.DataSink()
-        dataSink5 = sb.DataSink()
-        dataSink1_port_obj = dataSink1.getPort(self.port_map[comp_port_type])
-        dataSink2_port_obj = dataSink2.getPort(self.port_map[comp_port_type])
-        dataSink3_port_obj = dataSink3.getPort(self.port_map[comp_port_type])
-        dataSink4_port_obj = dataSink4.getPort(self.port_map[comp_port_type])
-        dataSink5_port_obj = dataSink5.getPort(self.port_map[comp_port_type])
+        streamSink1 = sb.StreamSink()
+        streamSink2 = sb.StreamSink()
+        streamSink3 = sb.StreamSink()
+        streamSink4 = sb.StreamSink()
+        streamSink5 = sb.StreamSink()
+        streamSink1_port_obj = streamSink1.getPort(self.port_map[comp_port_type])
+        streamSink2_port_obj = streamSink2.getPort(self.port_map[comp_port_type])
+        streamSink3_port_obj = streamSink3.getPort(self.port_map[comp_port_type])
+        streamSink4_port_obj = streamSink4.getPort(self.port_map[comp_port_type])
+        streamSink5_port_obj = streamSink5.getPort(self.port_map[comp_port_type])
            
         # alloc a tuner
         controller['ALLOC_ID'] = "control:"+str(uuid.uuid4()) # unique for each loop
         tAlloc = generateTunerAlloc(controller)
         pp(controller)
         pp(tAlloc)
-        comp_port_obj.connectPort(dataSink1_port_obj, controller['ALLOC_ID'])
+        comp_port_obj.connectPort(streamSink1_port_obj, controller['ALLOC_ID'])
         self.dut_ref.allocateCapacity(tAlloc)
            
         # Get a current stream with a five second timeout.
-        stream1 = dataSink1.getCurrentStream(5)
+        stream1 = streamSink1.port.getCurrentStream(5)
         while True:
             dataBlock = None
             if stream1:
@@ -2410,7 +2416,7 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                 self.check(False,True,'%s: Did not receive a stream'%(comp_port_name))
                 break
             if dataBlock:    
-                self.check(len(dataBlock.data())>0,True,'%s: Received data from tuner allocation'%(comp_port_name))
+                self.check(len(dataBlock.data)>0,True,'%s: Received data from tuner allocation'%(comp_port_name))
                 break
             elif count==200:
                 self.check(False,True,'%s: Did not receive data from allocation of tuner'%(comp_port_name))
@@ -2427,16 +2433,15 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         pp(status)
            
         #verify SRI
-        sri1 = stream1.sri()
+        sri1 = stream1.sri
         self._verifySRI (sri1,status,comp_port_name)  
         
         # verify multi-out port, connection with wrong connection ID does not get a stream
         bad_conn_id = "bad:"+str(uuid.uuid4())
-        comp_port_obj.connectPort(dataSink2_port_obj, bad_conn_id)
+        comp_port_obj.connectPort(streamSink2_port_obj, bad_conn_id)
        
-        stream2 = dataSink2.getCurrentStream(5)
-        if stream2:
-            self.check(False,True,'%s: multi-out test: Received a stream on port with bad connection ID'%(comp_port_name))
+        stream2 = streamSink2.port.getCurrentStream(5)
+        self.check(not stream2,True,'%s: multi-out test: Stream not received on port with bad connection ID'%(comp_port_name))
            
         #If a second tuner is available test additional cases of multiport behavior with second tuner
         if self.device_discovery[ttype] < 2:
@@ -2446,11 +2451,11 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
             controller2 = copy.copy(controller)
             controller2['ALLOC_ID'] = "control2:"+str(uuid.uuid4()) # unique for each loop
             tAlloc2 = generateTunerAlloc(controller2)
-            comp_port_obj.connectPort(dataSink5_port_obj, controller2['ALLOC_ID'])
+            comp_port_obj.connectPort(streamSink5_port_obj, controller2['ALLOC_ID'])
             self.dut_ref.allocateCapacity(tAlloc2)
    
             # verify basic data flow
-            stream5 = dataSink5.getCurrentStream(5)
+            stream5 = streamSink5.port.getCurrentStream(5)
             while True:
                 dataBlock = None
                 if stream5:
@@ -2466,15 +2471,15 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                     break
                 time.sleep(.01)
                 count+=1
-               
+
             # verify SRI
             status = self._getTunerStatusProp(controller2['ALLOC_ID'])
-            sri5 = stream5.sri()
+            sri5 = stream5.sri
             self._verifySRI (sri5,status,comp_port_name)
        
             # verify connection 1 did not get switched to the second stream
-            stream1 = dataSink1.getCurrentStream(5)
-            sri1 = stream1.sri()
+            stream1 = streamSink1.port.getCurrentStream(5)
+            sri1 = stream1.sri
             self.check(sri1.streamID,controller['ALLOC_ID'],'%s: multi-out test: First Stream still correct after second allocaiton'%(comp_port_name))
             self.dut_ref.deallocateCapacity(tAlloc2)
                
@@ -2483,10 +2488,10 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
             listener1 = generateListenerRequest(controller) # unique for each loop
             listener1['LISTENER_ID'] = "listener1:"+listener1['LISTENER_ID']
             listenerAlloc1 = generateListenerAlloc(listener1)
-            comp_port_obj.connectPort(dataSink3_port_obj, listener1['LISTENER_ID'])
+            comp_port_obj.connectPort(streamSink3_port_obj, listener1['LISTENER_ID'])
             self.dut_ref.allocateCapacity(listenerAlloc1)
                
-            stream3 = dataSink3.getCurrentStream(5)
+            stream3 = streamSink3.port.getCurrentStream(5)
             while True:
                 dataBlock = None
                 if stream3:
@@ -2495,7 +2500,7 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                     self.check(False,True,'%s: Did not receive a stream'%(comp_port_name))
                     break
                 if dataBlock:    
-                    self.check(len(dataBlock.data())>0,True,'%s: Received data from tuner allocation'%(comp_port_name))
+                    self.check(len(dataBlock.data)>0,True,'%s: Received data from tuner allocation'%(comp_port_name))
                     break
                 elif count==200:
                     self.check(False,True,'%s: Did not receive data from allocation of tuner'%(comp_port_name))
@@ -2504,7 +2509,7 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                 count+=1            
    
    
-            sri3 = stream3.sri()
+            sri3 = stream3.sri
             self.check(sri1.streamID==sri3.streamID,True,'%s: Received correct SRI from listener allocation'%(comp_port_name))
                
             # verify EOS
@@ -2512,19 +2517,31 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
                 listener2 = generateListenerRequest(controller) # unique for each loop
                 listener2['LISTENER_ID'] = "listener2:"+listener2['LISTENER_ID']
                 listenerAlloc2 = generateListenerAlloc(listener2)
-                comp_port_obj.connectPort(dataSink4_port_obj, listener2['LISTENER_ID'])
+                comp_port_obj.connectPort(streamSink4_port_obj, listener2['LISTENER_ID'])
                 self.dut_ref.allocateCapacity(listenerAlloc2)               
-                time.sleep(1.0)
-                stream4 = dataSink4.getCurrentStream(5)
+                stream4 = streamSink4.port.getCurrentStream(5)
    
             self.dut_ref.deallocateCapacity(listenerAlloc1)
+            # read from each stream; eos will not return true until all data is read
+            self._readToEos(stream3)
+            self._readToEos(stream1)
             self.check(stream3.eos(),True,'%s: Listener received EOS after deallocation of listener'%(comp_port_name))
             self.check(stream1.eos(),False,'%s: Controller did not receive EOS after deallocation of listener'%(comp_port_name))
             self.dut_ref.deallocateCapacity(tAlloc)
-            time.sleep(1.0)
+            self._readToEos(stream1)
             self.check(stream1.eos(),True,'%s: Controller did receive EOS after deallocation of tuner'%(comp_port_name))
             if listener2:
+                self._readToEos(stream4)
                 self.check(stream4.eos(),True,'%s: Listener received EOS after deallocation of tuner'%(comp_port_name))
+
+    def _readToEos(self, stream, timeout=1.0):
+        blocks = []
+        endtime = time.time()+timeout
+        block = stream.tryread()
+        while block and time.time() < endtime:
+            blocks.append(block)
+            block = stream.tryread()
+        return blocks
        
     def _testSDDS(self,tuner_control,comp_port_name,comp_port_type,ttype,controller,listener1=None,listener2=None):
         print 'Testing SDDS port Behavior'
@@ -3113,9 +3130,11 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         """
         ttype='RX_DIGITIZER'
         #Send an RF Info Packet
+        rfFlowId = 'testFlowID'
         rfInfo_port = self.dut.getPort("RFInfo_in")
-        rf_info_pkt = self._generateRFInfoPkt(rf_flow_id="testflowID")
-        rfInfo_port._set_rfinfo_pkt(rf_info_pkt)
+        #rf_info_pkt = self._generateRFInfoPkt(rf_flow_id=rfFlowId)
+        #rfInfo_port._set_rfinfo_pkt(rf_info_pkt)
+        rfInfo_port._set_rf_flow_id(rfFlowId)
         controller = generateTunerRequest()
         controller['RF_FLOW_ID'] = "NotmyRFFlowID"
            
@@ -3134,7 +3153,7 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
    
    
         # Use correct RF Flow ID
-        controller['RF_FLOW_ID'] = "testflowID"
+        controller['RF_FLOW_ID'] = rfFlowId
            
         # make allocations
         allocationID = controller['ALLOC_ID']
@@ -3593,10 +3612,10 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         if comp_port_type not in self.port_map:
             self.check(False, True, "Can't Check data flow for scanner because no supported output port was found")
             return
-        dataSink1 = sb.DataSink()
-        dataSink1_port_obj = dataSink1.getPort(self.port_map[comp_port_type])
+        streamSink1 = sb.StreamSink()
+        streamSink1_port_obj = streamSink1.getPort(self.port_map[comp_port_type])
         comp_port_obj = self.dut.getPort(str(comp_port_name))
-        comp_port_obj.connectPort(dataSink1_port_obj, alloc_id)
+        comp_port_obj.connectPort(streamSink1_port_obj, alloc_id)
             
         #Set Start Time to one second in the future
         start_time = bulkio.timestamp.now()+1
@@ -3611,22 +3630,22 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         # Check Data Results
         # Get a current stream with a five second timeout.
         count = 0
-        stream1 = dataSink1.getCurrentStream(5)
+        stream1 = streamSink1.port.getCurrentStream(5)
         datablocks = 0 
         while count<20:
             dataBlock = None
             if stream1:
-                dataBlock = stream1.read(blocking = False)
+                dataBlock = stream1.tryread()
             else:
                 self.check(False,True,'%s: Did not receive a stream'%(comp_port_name))
                 break
             if dataBlock:    
                 datablocks+=1
-                sri1 = stream1.sri()
+                sri1 = stream1.sri
                 if sri1.mode :
-                    blocklength = len(dataBlock.data())/2
+                    blocklength = len(dataBlock.data)/2
                 else:
-                    blocklength = len(dataBlock.data())
+                    blocklength = len(dataBlock.data)
                 self.check(getMaxSampleRate(ttype=ttype)/20,blocklength,'%s: Did not receive data of the correct Size in ScanMode '%(comp_port_name),silentSuccess=True)
             else:
                 count= count+1
@@ -3739,10 +3758,10 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         if comp_port_type not in self.port_map:
             self.check(False, True, "Can't Check data flow for scanner because no supported output port was found")
             return
-        dataSink1 = sb.DataSink()
-        dataSink1_port_obj = dataSink1.getPort(self.port_map[comp_port_type])
+        streamSink1 = sb.StreamSink()
+        streamSink1_port_obj = streamSink1.getPort(self.port_map[comp_port_type])
         comp_port_obj = self.dut.getPort(str(comp_port_name))
-        comp_port_obj.connectPort(dataSink1_port_obj, alloc_id)
+        comp_port_obj.connectPort(streamSink1_port_obj, alloc_id)
             
         #Set Start Time to one second in the future
         start_time = bulkio.timestamp.now()+1
@@ -3757,22 +3776,22 @@ class FrontendTunerTests(ParameterizedTestCase,unittest.TestCase):
         # Check Data Results
         # Get a current stream with a five second timeout.
         count = 0
-        stream1 = dataSink1.getCurrentStream(5)
+        stream1 = streamSink1.port.getCurrentStream(5)
         datablocks = 0 
         while count<20:
             dataBlock = None
             if stream1:
-                dataBlock = stream1.read(blocking = False)
+                dataBlock = stream1.tryread()
             else:
                 self.check(False,True,'%s: DISCRETE Scan: Did not receive a stream'%(comp_port_name))
                 break
             if dataBlock:    
                 datablocks+=1
-                sri1 = stream1.sri()
+                sri1 = stream1.sri
                 if sri1.mode :
-                    blocklength = len(dataBlock.data())/2
+                    blocklength = len(dataBlock.data)/2
                 else:
-                    blocklength = len(dataBlock.data())
+                    blocklength = len(dataBlock.data)
                 self.check(getMaxSampleRate(ttype=ttype)/20,blocklength,'%s: DISCRETE Scan: Did not receive data of the correct Size in ScanMode '%(comp_port_name),silentSuccess=True)
             else:
                 count= count+1
