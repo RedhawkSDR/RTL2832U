@@ -1,12 +1,22 @@
 variables:
   rh_21_release: '2.1.3'
-  librtl_version: '0.5.2'
+  librtl_version: '0.5.2-4'
   namespace: rh.
 
-#Global before script, determine if this is a tag and handle rpm release field accordingly
-before_script:
+stages:
+  - build
+  - deploy
+
+.package: &package
+  image: ${docker_registry}${docker_rpm_repository}docker:latest-rpm
+  stage: build
+  tags:
+    - ca
+    - docker
+  before_script:
     - safe_version=$(echo ${short_version} | tr -d -)
     - safe_ref=$(echo ${CI_COMMIT_REF_NAME} | tr -d /| tr '[:upper:]' '[:lower:]')
+    - librtl_version="`echo ${librtl_version} | sed -r 's/\./-/g'`";
     - if [ -z "$CI_COMMIT_TAG" ]; then
         redhawk_version=${latest_version}
         rpm_release="0.$CI_PIPELINE_ID.rh${safe_version}";
@@ -16,13 +26,6 @@ before_script:
       fi
     - redhawk_repo=$yum_repo_url/redhawk-core-framework/$redhawk_version/$dist/$arch
     - librtl_repo=$s3_repo_url/redhawk-dependencies/librtlsdr/yum/$librtl_version/$dist/$arch
-
-.package: &package
-  image: ${docker_registry}${docker_rpm_repository}docker:latest-rpm
-  stage: build
-  tags:
-    - ca
-    - docker
   script:
     - printf "FROM ${docker_registry}${rpmbuild_repository}rpmbuild:$dist-$arch-onbuild" > Dockerfile
     - docker login ${docker_registry} -u ${docker_user} -p ${docker_password}
@@ -77,10 +80,9 @@ deploy:
   image: ${docker_registry}centos:7
   stage: deploy
   dependencies: []
-  before_script:
-    - echo "Deploying to $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME"
   script:
     - if [ -n "$jenkins_url" ]; then
+        echo "Deploying to $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME"
         curl --insecure -X POST $jenkins_url/job/$CI_PROJECT_NAMESPACE/job/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME/buildWithParameters?pipeline_id=$CI_PIPELINE_ID --user $jenkins_user:$jenkins_api_token;
       fi
   except:
