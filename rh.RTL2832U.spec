@@ -32,7 +32,7 @@ Prefix:         %{_prefix}
 
 Name:           rh.RTL2832U
 Version:        2.0.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Device %{name}
 
 Group:          REDHAWK/Devices
